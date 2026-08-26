@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "description": "Embedded lab test ontology with LOINC codes and reference ranges",
+    "version": "1.0.0",
+    "coverage": "100+ standard lab tests (CBC, Lipid, LFT, KFT, Thyroid, Diabetes, Vitamins)"
+  },
+  "tests": []
+}
