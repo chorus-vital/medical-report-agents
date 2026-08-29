@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import docx
 import pdfplumber
 from PIL import Image
 
@@ -126,11 +127,13 @@ async def extract_from_file(
         return await _extract_from_pdf(path)
     if file_type == "image":
         return await _extract_from_image(path)
+    if file_type == "docx":
+        return await _extract_from_docx(path)
     if file_type == "text":
         return await _extract_from_text(path.read_text(encoding="utf-8"))
 
     raise ValueError(
-        f"Unsupported file_type: '{file_type}'. Use 'pdf', 'image', or 'text'."
+        f"Unsupported file_type: '{file_type}'. Use 'pdf', 'image', 'docx', or 'text'."
     )
 
 
@@ -141,9 +144,51 @@ def detect_file_type(filename: str) -> str:
         return "pdf"
     if ext in {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}:
         return "image"
+    if ext in {".docx", ".doc"}:
+        return "docx"
     if ext in {".txt", ".csv", ".text"}:
         return "text"
     raise ValueError(f"Unsupported file extension: '{ext}'")
+
+
+# ───────────────────────── DOCX Extraction ──────────────────────────────────
+
+async def _extract_from_docx(
+    path: Path,
+) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    """Extract lab data from a Word (.docx) file by reading paragraphs + tables."""
+    try:
+        document = docx.Document(str(path))
+    except Exception as exc:
+        logger.error("Failed to open .docx file: %s", exc)
+        return [], None
+
+    # ── extract paragraphs ──
+    paragraphs_text = "\n".join(
+        p.text for p in document.paragraphs if p.text.strip()
+    )
+
+    # ── extract tables ──
+    tables_text = ""
+    for table in document.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells]
+            tables_text += " | ".join(cells) + "\n"
+
+    combined = paragraphs_text.strip()
+    if tables_text.strip():
+        combined += "\n\n--- EXTRACTED TABLES ---\n" + tables_text.strip()
+
+    if len(combined.strip()) > 50:
+        logger.info(
+            "DOCX text extraction OK (%d para-chars, %d table-chars)",
+            len(paragraphs_text),
+            len(tables_text),
+        )
+        return await _extract_from_text(combined)
+
+    logger.warning("DOCX appears empty or too short (%d chars)", len(combined))
+    return [], None
 
 
 # ───────────────────────── PDF Extraction ───────────────────────────────────
@@ -257,7 +302,15 @@ async def _extract_from_text(
         llm = get_chat_model()
         prompt = EXTRACTION_PROMPT.format(text=raw_text)
         response = await llm.ainvoke(prompt)
-        text = response.content if hasattr(response, "content") else str(response)
+        content = response.content if hasattr(response, "content") else str(response)
+        # Gemini 3.6+ may return content as a list of parts
+        if isinstance(content, list):
+            text = "".join(
+                part if isinstance(part, str) else part.get("text", str(part))
+                for part in content
+            )
+        else:
+            text = str(content)
         return _parse_llm_json(text)
     except Exception as exc:
         logger.error("LLM text extraction failed: %s — trying regex fallback", exc)
