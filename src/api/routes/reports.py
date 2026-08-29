@@ -27,10 +27,49 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _build_response(
+    result: dict, report_id: str, filename: str, file_type: str
+) -> dict:
+    """
+    Shape a pipeline result into the API response.
+
+    ``extraction_method``/``degraded``/``warnings`` are surfaced deliberately:
+    when the LLM is unreachable the pipeline silently falls back to a regex
+    matcher, and without these fields a degraded run is indistinguishable from
+    a clean one.
+    """
+    extracted = result.get("extracted_items", [])
+    degraded = bool(result.get("extraction_degraded"))
+
+    if extracted and degraded:
+        status = "degraded"
+    elif extracted:
+        status = "success"
+    else:
+        status = "no_results"
+
+    return {
+        "report_id": report_id,
+        "filename": filename,
+        "file_type": file_type,
+        "status": status,
+        "patient_info": result.get("patient_info"),
+        "extracted_items": extracted,
+        "items_count": len(extracted),
+        "report_notes": result.get("report_notes", []),
+        "extraction": {
+            "method": result.get("extraction_method", "unknown"),
+            "degraded": degraded,
+            "warnings": result.get("warnings", []),
+        },
+        "errors": result.get("errors", []),
+    }
+
+
 @router.post("/analyze")
 async def analyze_report(file: UploadFile = File(...)):
     """
-    Upload a medical report (PDF / image / text) and receive a
+    Upload a medical report (PDF / image / docx / text) and receive a
     structured analysis with extracted lab items and patient info.
 
     The uploaded file is persisted under ``data/uploads/``.
@@ -72,14 +111,93 @@ async def analyze_report(file: UploadFile = File(...)):
         logger.error("Pipeline failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
 
-    errors = result.get("errors", [])
-    extracted = result.get("extracted_items", [])
+    return _build_response(
+        result, file_id, file.filename, file_type
+    )
 
-    return {
+
+@router.post("/analyze-text")
+async def analyze_text_report(payload: dict):
+    """
+    Analyze raw lab report text directly.
+    """
+    text = payload.get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text content is required.")
+
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_id = str(uuid.uuid4())
+    save_path = upload_dir / f"{file_id}.txt"
+    save_path.write_text(text, encoding="utf-8")
+
+    initial_state = {
+        "file_path": str(save_path),
+        "file_type": "text",
+        "raw_text": text,
         "report_id": file_id,
-        "status": "success" if extracted else "no_results",
-        "patient_info": result.get("patient_info"),
-        "extracted_items": extracted,
-        "items_count": len(extracted),
-        "errors": errors,
     }
+
+    try:
+        result = await pipeline.ainvoke(initial_state)
+    except Exception as exc:
+        logger.error("Pipeline failed for pasted text: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
+
+    return _build_response(
+        result, file_id, "pasted_report.txt", "text"
+    )
+
+
+@router.get("/samples")
+async def list_sample_reports():
+    """
+    List available bundled sample reports for quick testing.
+    """
+    samples_dir = Path("data/samples")
+    if not samples_dir.exists():
+        return {"samples": []}
+
+    samples = []
+    for p in sorted(samples_dir.iterdir()):
+        if p.is_file():
+            samples.append({
+                "filename": p.name,
+                "size_bytes": p.stat().st_size,
+                "file_type": detect_file_type(p.name) if p.suffix else "unknown",
+            })
+    return {"samples": samples}
+
+
+@router.post("/analyze-sample/{filename}")
+async def analyze_sample_report(filename: str):
+    """
+    Run Agent 1 directly on a bundled sample report.
+    """
+    sample_path = Path("data/samples") / filename
+    if not sample_path.exists() or not sample_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Sample file '{filename}' not found.")
+
+    try:
+        file_type = detect_file_type(filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    file_id = f"sample-{uuid.uuid4().hex[:8]}"
+
+    initial_state = {
+        "file_path": str(sample_path),
+        "file_type": file_type,
+        "report_id": file_id,
+    }
+
+    try:
+        result = await pipeline.ainvoke(initial_state)
+    except Exception as exc:
+        logger.error("Pipeline failed on sample: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
+
+    return _build_response(
+        result, file_id, filename, file_type
+    )

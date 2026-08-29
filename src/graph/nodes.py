@@ -16,7 +16,7 @@ import uuid
 from typing import Any, Dict
 
 from src.schemas.state import PipelineState
-from src.services.extractor import extract_from_file
+from src.services.extractor import extract_from_file_detailed
 
 logger = logging.getLogger(__name__)
 
@@ -54,40 +54,48 @@ async def extract_node(state: PipelineState) -> Dict[str, Any]:
     )
 
     try:
-        extracted_items, patient_info = await extract_from_file(
-            file_path, file_type
-        )
+        result = await extract_from_file_detailed(file_path, file_type)
     except Exception as exc:
-        logger.error("❌ [extract] Failed: %s", exc)
+        logger.error("❌ [extract] Failed: %s", exc, exc_info=True)
         return {
             "extracted_items": [],
             "patient_info": None,
+            "report_notes": [],
+            "extraction_method": "failed",
+            "extraction_degraded": True,
+            "warnings": [],
             "report_id": report_id,
             "current_step": "extraction_failed",
             "errors": [f"Extraction error: {exc}"],
         }
 
-    if not extracted_items:
+    errors: list[str] = []
+    if not result.items:
         logger.warning("⚠️  [extract] No lab items found in document")
-        return {
-            "extracted_items": [],
-            "patient_info": patient_info,
-            "report_id": report_id,
-            "current_step": "extraction_complete",
-            "errors": ["No lab results could be extracted from the document."],
-        }
+        errors.append("No lab results could be extracted from the document.")
+
+    if result.degraded:
+        # Surfaced to the caller so a fallback run is never presented as a
+        # clean one — this is exactly the failure mode that made a
+        # misconfigured API key look like a bad document.
+        logger.warning("⚠️  [extract] Degraded extraction via %s", result.method)
 
     logger.info(
-        "✅ [extract] Done — %d items, patient=%s",
-        len(extracted_items),
-        "yes" if patient_info else "no",
+        "✅ [extract] Done — %d items via %s, patient=%s",
+        len(result.items),
+        result.method,
+        "yes" if result.patient_info else "no",
     )
     return {
-        "extracted_items": extracted_items,
-        "patient_info": patient_info,
+        "extracted_items": result.items,
+        "patient_info": result.patient_info,
+        "report_notes": result.notes,
+        "extraction_method": result.method,
+        "extraction_degraded": result.degraded,
+        "warnings": result.warnings,
         "report_id": report_id,
         "current_step": "extraction_complete",
-        "errors": [],
+        "errors": errors,
     }
 
 
