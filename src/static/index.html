@@ -127,6 +127,46 @@
       box-shadow: 0 0 8px #10b981;
     }
 
+    /* Provenance banner: says which engine produced the results, and warns
+       loudly when the LLM was unavailable and a regex fallback ran instead. */
+    .extraction-banner {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+      border: 1px solid;
+    }
+
+    .extraction-banner.ok {
+      background: #0f2027;
+      border-color: #1e3a5f;
+      color: #7dd3fc;
+    }
+
+    .extraction-banner.warn {
+      background: #2a1f0a;
+      border-color: #78500f;
+      color: #fbbf24;
+    }
+
+    .extraction-banner strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.85rem;
+    }
+
+    .extraction-banner code {
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 0.75rem;
+      opacity: 0.85;
+    }
+
+    .extraction-banner ul {
+      margin: 0.4rem 0 0;
+      padding-left: 1.1rem;
+    }
+
     .nav-link {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -868,6 +908,9 @@
 
         <!-- Active Results -->
         <div class="results-active" id="resultsActive">
+          <!-- Extraction provenance / degraded-mode warning -->
+          <div class="extraction-banner" id="extractionBanner" style="display: none;"></div>
+
           <!-- Patient Info -->
           <div class="patient-card" id="patientCard">
             <div class="patient-header">
@@ -896,6 +939,7 @@
               <thead>
                 <tr>
                   <th class="td-num">#</th>
+                  <th>Panel</th>
                   <th>Test Name</th>
                   <th>Observed Value</th>
                   <th>Unit</th>
@@ -1123,31 +1167,27 @@
       document.getElementById('resultsEmpty').style.display = 'none';
       document.getElementById('resultsActive').classList.add('show');
 
+      renderExtractionBanner(data);
+
       // Patient Demographics
       const p = data.patient_info || {};
       const pGrid = document.getElementById('patientGrid');
-      pGrid.innerHTML = `
+      const field = (label, value) => `
         <div>
-          <div class="patient-item-label">Name</div>
-          <div class="patient-item-val">${p.name || '—'}</div>
-        </div>
-        <div>
-          <div class="patient-item-label">Age / Sex</div>
-          <div class="patient-item-val">${p.age || '—'} / ${p.sex || '—'}</div>
-        </div>
-        <div>
-          <div class="patient-item-label">Report Date</div>
-          <div class="patient-item-val">${p.date || '—'}</div>
-        </div>
-        <div>
-          <div class="patient-item-label">Lab Facility</div>
-          <div class="patient-item-val">${p.lab_name || '—'}</div>
-        </div>
-        <div>
-          <div class="patient-item-label">Referring Doctor</div>
-          <div class="patient-item-val">${p.referring_doctor || '—'}</div>
+          <div class="patient-item-label">${label}</div>
+          <div class="patient-item-val">${escapeHtml(value || '—')}</div>
         </div>
       `;
+      pGrid.innerHTML = [
+        field('Name', p.name),
+        field('Age / Sex', `${p.age || '—'} / ${p.sex || '—'}`),
+        field('Report Date', p.date || p.reported_on),
+        field('Lab Facility', p.lab_name),
+        field('Referring Doctor', p.referring_doctor),
+        field('Patient ID', p.patient_id),
+        field('Report Ref. ID', p.report_ref_id),
+        field('Collected On', p.collected_on),
+      ].join('');
 
       // Badge
       const count = data.items_count || (data.extracted_items ? data.extracted_items.length : 0);
@@ -1161,17 +1201,59 @@
       document.getElementById('jsonViewer').textContent = JSON.stringify(data, null, 2);
     }
 
+    // Show how the results were produced. A regex-fallback run looks identical
+    // to a clean one in the table, so the difference has to be stated here.
+    function renderExtractionBanner(data) {
+      const banner = document.getElementById('extractionBanner');
+      const info = data.extraction || {};
+      const warnings = info.warnings || [];
+      const notes = data.report_notes || [];
+
+      if (!info.method && !warnings.length && !notes.length) {
+        banner.style.display = 'none';
+        return;
+      }
+
+      const parts = [];
+
+      if (info.degraded) {
+        parts.push(
+          `<strong>⚠️ Degraded extraction — results are likely incomplete</strong>` +
+          `The AI model was unavailable, so a basic pattern matcher ran instead. ` +
+          `Check <code>GEMINI_API_KEY</code> in your .env, then retry.`
+        );
+      } else {
+        parts.push(`<strong>✅ Extracted via <code>${escapeHtml(info.method || 'unknown')}</code></strong>`);
+      }
+
+      if (warnings.length) {
+        parts.push(`<ul>${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`);
+      }
+
+      if (notes.length) {
+        parts.push(
+          `<div style="margin-top:0.5rem"><strong>🩺 Clinical notes on this report</strong>` +
+          `<ul>${notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul></div>`
+        );
+      }
+
+      banner.className = 'extraction-banner ' + (info.degraded ? 'warn' : 'ok');
+      banner.innerHTML = parts.join('');
+      banner.style.display = 'block';
+    }
+
     function renderTableRows(items) {
       const tbody = document.getElementById('resultsTableBody');
       if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 2rem;">No items found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">No items found</td></tr>`;
         return;
       }
 
       tbody.innerHTML = items.map((item, idx) => `
         <tr>
           <td class="td-num">${idx + 1}</td>
-          <td class="td-name">${escapeHtml(item.test_name || '—')}</td>
+          <td class="td-unit">${escapeHtml(item.panel || '—')}</td>
+          <td class="td-name" ${item.method ? `title="Method: ${escapeHtml(item.method)}"` : ''}>${escapeHtml(item.test_name || '—')}</td>
           <td><span class="td-val">${escapeHtml(item.observed_value != null ? String(item.observed_value) : '—')}</span></td>
           <td class="td-unit">${escapeHtml(item.unit || '—')}</td>
           <td class="td-range">${escapeHtml(item.reference_range || '—')}</td>
@@ -1183,11 +1265,11 @@
       if (!currentResults || !currentResults.extracted_items) return;
       const q = document.getElementById('tableFilterInput').value.toLowerCase();
       const filtered = currentResults.extracted_items.filter(item => {
-        const name = (item.test_name || '').toLowerCase();
-        const val = String(item.observed_value || '').toLowerCase();
-        const unit = (item.unit || '').toLowerCase();
-        const range = (item.reference_range || '').toLowerCase();
-        return name.includes(q) || val.includes(q) || unit.includes(q) || range.includes(q);
+        const haystack = [
+          item.test_name, item.observed_value, item.unit,
+          item.reference_range, item.panel, item.method,
+        ].map(v => String(v || '').toLowerCase()).join(' ');
+        return haystack.includes(q);
       });
       renderTableRows(filtered);
     }

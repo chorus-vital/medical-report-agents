@@ -18,6 +18,10 @@ class PipelineState(TypedDict, total=False):
     # --- Extraction (Node 1 output) ---
     extracted_items: List[Dict[str, Any]]
     patient_info: Optional[Dict[str, Any]]
+    report_notes: List[str]
+    extraction_method: str   # which engine + model produced the results
+    extraction_degraded: bool  # True when the LLM was unavailable
+    warnings: List[str]
 
     # --- Terminology & Flagging (Node 2 output) ---
     lab_results: List[LabResult]

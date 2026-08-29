@@ -27,6 +27,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _build_response(
+    result: dict, report_id: str, filename: str, file_type: str
+) -> dict:
+    """
+    Shape a pipeline result into the API response.
+
+    ``extraction_method``/``degraded``/``warnings`` are surfaced deliberately:
+    when the LLM is unreachable the pipeline silently falls back to a regex
+    matcher, and without these fields a degraded run is indistinguishable from
+    a clean one.
+    """
+    extracted = result.get("extracted_items", [])
+    degraded = bool(result.get("extraction_degraded"))
+
+    if extracted and degraded:
+        status = "degraded"
+    elif extracted:
+        status = "success"
+    else:
+        status = "no_results"
+
+    return {
+        "report_id": report_id,
+        "filename": filename,
+        "file_type": file_type,
+        "status": status,
+        "patient_info": result.get("patient_info"),
+        "extracted_items": extracted,
+        "items_count": len(extracted),
+        "report_notes": result.get("report_notes", []),
+        "extraction": {
+            "method": result.get("extraction_method", "unknown"),
+            "degraded": degraded,
+            "warnings": result.get("warnings", []),
+        },
+        "errors": result.get("errors", []),
+    }
+
+
 @router.post("/analyze")
 async def analyze_report(file: UploadFile = File(...)):
     """
@@ -72,19 +111,9 @@ async def analyze_report(file: UploadFile = File(...)):
         logger.error("Pipeline failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
 
-    errors = result.get("errors", [])
-    extracted = result.get("extracted_items", [])
-
-    return {
-        "report_id": file_id,
-        "filename": file.filename,
-        "file_type": file_type,
-        "status": "success" if extracted else "no_results",
-        "patient_info": result.get("patient_info"),
-        "extracted_items": extracted,
-        "items_count": len(extracted),
-        "errors": errors,
-    }
+    return _build_response(
+        result, file_id, file.filename, file_type
+    )
 
 
 @router.post("/analyze-text")
@@ -116,19 +145,9 @@ async def analyze_text_report(payload: dict):
         logger.error("Pipeline failed for pasted text: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
 
-    errors = result.get("errors", [])
-    extracted = result.get("extracted_items", [])
-
-    return {
-        "report_id": file_id,
-        "filename": "pasted_report.txt",
-        "file_type": "text",
-        "status": "success" if extracted else "no_results",
-        "patient_info": result.get("patient_info"),
-        "extracted_items": extracted,
-        "items_count": len(extracted),
-        "errors": errors,
-    }
+    return _build_response(
+        result, file_id, "pasted_report.txt", "text"
+    )
 
 
 @router.get("/samples")
@@ -179,16 +198,6 @@ async def analyze_sample_report(filename: str):
         logger.error("Pipeline failed on sample: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
 
-    errors = result.get("errors", [])
-    extracted = result.get("extracted_items", [])
-
-    return {
-        "report_id": file_id,
-        "filename": filename,
-        "file_type": file_type,
-        "status": "success" if extracted else "no_results",
-        "patient_info": result.get("patient_info"),
-        "extracted_items": extracted,
-        "items_count": len(extracted),
-        "errors": errors,
-    }
+    return _build_response(
+        result, file_id, filename, file_type
+    )
