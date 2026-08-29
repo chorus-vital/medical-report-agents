@@ -6,9 +6,12 @@ from __future__ import annotations
 
 import logging
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import health, reports
 
@@ -42,6 +45,27 @@ app.add_middleware(
 # ── routes ──
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+
+# ── Static UI / Webview Tester ──
+static_dirs = [
+    Path(__file__).resolve().parent.parent / "static",  # src/static
+    Path(__file__).resolve().parent.parent.parent / "static",  # static
+]
+static_dir = next((d for d in static_dirs if d.exists()), static_dirs[0])
+static_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def serve_webview():
+    """Serve the Agent 1 interactive testing webview."""
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return HTMLResponse(
+        "<h2>Medical Report Analyzer Webview</h2><p>Static UI not found.</p>"
+    )
 
 
 # ── global error handler ──

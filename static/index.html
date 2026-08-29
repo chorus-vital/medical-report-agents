@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medical Report Analyzer — Agent 1 Tester</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #131b2e;
+      --card-border: #1e293b;
+      --card-hover: #1e2945;
+      --primary: #06b6d4;
+      --primary-hover: #0891b2;
+      --primary-glow: rgba(6, 182, 212, 0.25);
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --badge-bg: #1e293b;
+      --table-header: #0f172a;
+      --table-row-hover: #1a233a;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 3rem;
+    }
+
+    /* ── Header ── */
+    header {
+      background: rgba(19, 27, 46, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 0.85rem 1.5rem;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #06b6d4, #3b82f6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand-subtitle {
+      font-size: 0.78rem;
+      color: var(--primary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #142438;
+      border: 1px solid #1e3a5f;
+      color: #38bdf8;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .nav-link {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.35rem 0.7rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      transition: all 0.15s ease;
+    }
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--card-hover);
+      border-color: var(--primary);
+    }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1200px;
+      margin: 2rem auto 0;
+      padding: 0 1.5rem;
+    }
+
+    .intro-banner {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(59, 130, 246, 0.04));
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .intro-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: #ffffff;
+    }
+
+    .intro-text p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .flow-steps {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .flow-step {
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .flow-step.active {
+      background: var(--primary);
+      color: #0b0f19;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .flow-step.pending {
+      background: var(--card-bg);
+      color: var(--text-dim);
+      border: 1px dashed var(--card-border);
+    }
+
+    .flow-arrow {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    /* ── Grid: Input vs Preview ── */
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.75rem;
+    }
+
+    @media (min-width: 900px) {
+      .grid-container {
+        grid-template-columns: 420px 1fr;
+      }
+    }
+
+    /* ── Card Styling ── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    /* ── Tabs ── */
+    .tab-nav {
+      display: flex;
+      background: #0f172a;
+      padding: 0.25rem;
+      border-radius: var(--radius-sm);
+      gap: 0.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* ── Dropzone ── */
+    .dropzone {
+      border: 2px dashed #2a3a55;
+      border-radius: var(--radius);
+      padding: 2rem 1.25rem;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.6);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(6, 182, 212, 0.05);
+    }
+
+    .dropzone-icon {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .dropzone-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .dropzone-hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-selected {
+      display: none;
+      background: #142036;
+      border: 1px solid #1e3556;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-selected.show {
+      display: flex;
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow: hidden;
+    }
+
+    .file-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 230px;
+    }
+
+    .file-size {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .btn-clear {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 0.25rem;
+    }
+    .btn-clear:hover { color: var(--danger); }
+
+    /* ── Quick Sample Buttons ── */
+    .sample-section {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .sample-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 0.6rem;
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .sample-card {
+      background: #142036;
+      border: 1px solid #1e2f4a;
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .sample-card:hover {
+      background: #1a2a46;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .sample-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .sample-desc {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .sample-tag {
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* ── Textarea ── */
+    .paste-area {
+      width: 100%;
+      height: 180px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      padding: 0.75rem;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+
+    .paste-area:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    /* ── Primary Action Button ── */
+    .btn-submit {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      opacity: 0.95;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px var(--primary-glow);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #ffffff;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Results Container ── */
+    .results-empty {
+      text-align: center;
+      padding: 4rem 1.5rem;
+      color: var(--text-dim);
+    }
+
+    .results-empty-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.6;
+    }
+
+    .results-active {
+      display: none;
+    }
+
+    .results-active.show {
+      display: block;
+    }
+
+    /* ── Patient Info Card ── */
+    .patient-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .patient-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .patient-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .patient-item-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .patient-item-val {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Results Header & Search ── */
+    .results-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .results-count-badge {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .search-box {
+      position: relative;
+      min-width: 220px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Table ── */
+    .table-wrapper {
+      max-height: 440px;
+      overflow-y: auto;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      background: #0f172a;
+      margin-bottom: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.82rem;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: var(--table-header);
+      z-index: 10;
+    }
+
+    th {
+      padding: 0.75rem 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td {
+      padding: 0.65rem 0.9rem;
+      border-bottom: 1px solid #172238;
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: var(--table-row-hover);
+    }
+
+    .td-num {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      width: 36px;
+    }
+
+    .td-name {
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .td-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .td-unit {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .td-range {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-size: 0.76rem;
+    }
+
+    /* ── JSON Accordion ── */
+    details.json-accordion {
+      background: #0b1120;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    summary.json-summary {
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    summary.json-summary:hover {
+      color: var(--text);
+    }
+
+    .json-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-copy {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-copy:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    pre.json-pre {
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      max-height: 280px;
+      overflow: auto;
+      line-height: 1.4;
+    }
+
+    /* ── Error Banner ── */
+    .error-banner {
+      display: none;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-banner.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🔬</div>
+        <div>
+          <div class="brand-title">Medical Report Analyzer</div>
+          <div class="brand-subtitle">Agent 1 · Ingestion & Extraction Tester</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="badge-status" id="modelStatusBadge">
+          <span class="status-dot"></span>
+          <span id="modelStatusText">Connecting...</span>
+        </div>
+        <a href="/docs" target="_blank" class="nav-link">Swagger Docs</a>
+        <a href="/api/health" target="_blank" class="nav-link">Health API</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main>
+    <div class="intro-banner">
+      <div class="intro-text">
+        <h1>Agent 1 Interactive Verification</h1>
+        <p>Test document parsing (PDF, DOCX, Images, Text) and structured lab extraction powered by Gemini / Regex fallback.</p>
+      </div>
+      <div class="flow-steps">
+        <span class="flow-step active">1. Ingestion & Extract</span>
+        <span class="flow-arrow">➔</span>
+        <span class="flow-step pending">2. Ground & Flag</span>
+        <span class="flow-arrow">➔</span>
+        <span class="flow-step pending">3. Reason & Verify</span>
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div class="grid-container">
+      <!-- ── Left Column: Input Panel ── -->
+      <section class="card">
+        <div class="card-title">
+          <span>📤 Report Input</span>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" id="tabUploadBtn" onclick="switchTab('upload')">📁 Upload File</button>
+          <button class="tab-btn" id="tabPasteBtn" onclick="switchTab('paste')">📝 Paste Text</button>
+        </div>
+
+        <!-- Tab 1: File Upload -->
+        <div id="tabUploadContent">
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <div class="dropzone-icon">📄</div>
+            <div class="dropzone-title">Click or drag report file here</div>
+            <div class="dropzone-hint">Supports PDF, DOCX, PNG, JPG, JPEG, TXT</div>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp" onchange="handleFileSelected(event)" />
+          </div>
+
+          <div class="file-selected" id="fileSelectedBar">
+            <div class="file-info">
+              <span>📎</span>
+              <div>
+                <div class="file-name" id="selectedFileName">file.txt</div>
+                <div class="file-size" id="selectedFileSize">0 KB</div>
+              </div>
+            </div>
+            <button class="btn-clear" onclick="clearSelectedFile()" title="Remove file">✕</button>
+          </div>
+
+          <button class="btn-submit" id="btnSubmitFile" onclick="submitFileAnalysis()">
+            <span class="spinner" id="fileSpinner"></span>
+            <span id="btnSubmitText">🚀 Run Agent 1 Extraction</span>
+          </button>
+
+          <!-- Quick Samples -->
+          <div class="sample-section">
+            <div class="sample-title">⚡ Quick Test Samples</div>
+            <div class="sample-grid">
+              <button class="sample-card" onclick="loadAndRunSample('sample_report_01.txt')">
+                <div>
+                  <div class="sample-name">sample_report_01.txt</div>
+                  <div class="sample-desc">Full Health Checkup (39 lab tests)</div>
+                </div>
+                <span class="sample-tag">TXT</span>
+              </button>
+              <button class="sample-card" onclick="loadAndRunSample('sample_report_02.docx')">
+                <div>
+                  <div class="sample-name">sample_report_02.docx</div>
+                  <div class="sample-desc">CBC & Metabolic Panel (15 tests)</div>
+                </div>
+                <span class="sample-tag">DOCX</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Paste Raw Text -->
+        <div id="tabPasteContent" style="display: none;">
+          <textarea class="paste-area" id="pasteArea" placeholder="Paste your lab report text here... (e.g. Hemoglobin 14.5 g/dL 12.0 - 16.0)"></textarea>
+          <button class="btn-submit" id="btnSubmitTextTab" onclick="submitTextAnalysis()">
+            <span class="spinner" id="textSpinner"></span>
+            <span>🚀 Run Agent 1 on Text</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Right Column: Extraction Results ── -->
+      <section class="card">
+        <div class="card-title">
+          <span>📊 Extraction Output</span>
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div class="results-empty" id="resultsEmpty">
+          <div class="results-empty-icon">🧪</div>
+          <h3>No Extraction Results Yet</h3>
+          <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.35rem;">
+            Upload a file or choose a sample report on the left to test Agent 1.
+          </p>
+        </div>
+
+        <!-- Active Results -->
+        <div class="results-active" id="resultsActive">
+          <!-- Patient Info -->
+          <div class="patient-card" id="patientCard">
+            <div class="patient-header">
+              <span>👤 Patient Demographics</span>
+            </div>
+            <div class="patient-grid" id="patientGrid">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Results Summary Bar & Filter -->
+          <div class="results-bar">
+            <div class="results-count-badge" id="itemsCountBadge">
+              <span style="font-size: 1rem;">✅</span>
+              <span id="itemsCountText">0 Tests Extracted</span>
+            </div>
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="search-input" id="tableFilterInput" placeholder="Filter lab tests..." oninput="filterResultsTable()" />
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th class="td-num">#</th>
+                  <th>Test Name</th>
+                  <th>Observed Value</th>
+                  <th>Unit</th>
+                  <th>Reference Range</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Raw JSON Accordion -->
+          <details class="json-accordion">
+            <summary class="json-summary">
+              <span>Inspect Raw API Response (JSON)</span>
+              <div class="json-actions">
+                <button class="btn-copy" onclick="copyJsonToClipboard(event)">📋 Copy JSON</button>
+              </div>
+            </summary>
+            <pre class="json-pre" id="jsonViewer">{}</pre>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let activeFile = null;
+    let currentResults = null;
+
+    // Check health on page load
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modelStatusText').textContent =
+            `API Online · ${data.model_provider} (${data.model_name})`;
+        } else {
+          document.getElementById('modelStatusText').textContent = 'API Degraded';
+        }
+      } catch (err) {
+        document.getElementById('modelStatusText').textContent = 'API Offline';
+      }
+    }
+    checkHealth();
+
+    // Tab switching
+    function switchTab(tab) {
+      const uploadBtn = document.getElementById('tabUploadBtn');
+      const pasteBtn = document.getElementById('tabPasteBtn');
+      const uploadContent = document.getElementById('tabUploadContent');
+      const pasteContent = document.getElementById('tabPasteContent');
+
+      if (tab === 'upload') {
+        uploadBtn.classList.add('active');
+        pasteBtn.classList.remove('active');
+        uploadContent.style.display = 'block';
+        pasteContent.style.display = 'none';
+      } else {
+        pasteBtn.classList.add('active');
+        uploadBtn.classList.remove('active');
+        pasteContent.style.display = 'block';
+        uploadContent.style.display = 'none';
+      }
+    }
+
+    // Drag and drop handlers
+    const dropzone = document.getElementById('dropzone');
+    ['dragenter', 'dragover'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      });
+    });
+    dropzone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleSelectedFileObj(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleFileSelected(event) {
+      if (event.target.files && event.target.files[0]) {
+        handleSelectedFileObj(event.target.files[0]);
+      }
+    }
+
+    function handleSelectedFileObj(file) {
+      activeFile = file;
+      document.getElementById('selectedFileName').textContent = file.name;
+      document.getElementById('selectedFileSize').textContent = formatBytes(file.size);
+      document.getElementById('fileSelectedBar').classList.add('show');
+      hideError();
+    }
+
+    function clearSelectedFile() {
+      activeFile = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileSelectedBar').classList.remove('show');
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function showError(msg) {
+      const banner = document.getElementById('errorBanner');
+      banner.textContent = '❌ ' + msg;
+      banner.classList.add('show');
+    }
+
+    function hideError() {
+      document.getElementById('errorBanner').classList.remove('show');
+    }
+
+    function setLoading(isLoading, isText = false) {
+      const spinner = isText ? document.getElementById('textSpinner') : document.getElementById('fileSpinner');
+      const submitBtn = isText ? document.getElementById('btnSubmitTextTab') : document.getElementById('btnSubmitFile');
+
+      if (isLoading) {
+        spinner.style.display = 'inline-block';
+        submitBtn.disabled = true;
+        hideError();
+      } else {
+        spinner.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Submit File Upload
+    async function submitFileAnalysis() {
+      if (!activeFile) {
+        showError('Please select a file to analyze.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', activeFile);
+
+      setLoading(true, false);
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch('/api/reports/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Analysis failed');
+        }
+        const timeTaken = ((performance.now() - t0) / 1000).toFixed(2);
+        renderResults(data, timeTaken);
+      } catch (err) {
+        showError(err.message || 'Error occurred while analyzing file.');
+      } finally {
+        setLoading(false, false);
+      }
+    }
+
+    // Submit Sample direct load
+    async function loadAndRunSample(filename) {
+      setLoading(true, false);
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch(`/api/reports/analyze-sample/${encodeURIComponent(filename)}`, {
+          method: 'POST',
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Sample analysis failed');
+        }
+        const timeTaken = ((performance.now() - t0) / 1000).toFixed(2);
+        renderResults(data, timeTaken);
+      } catch (err) {
+        showError(err.message || 'Error running sample analysis.');
+      } finally {
+        setLoading(false, false);
+      }
+    }
+
+    // Submit Text Paste
+    async function submitTextAnalysis() {
+      const text = document.getElementById('pasteArea').value.trim();
+      if (!text) {
+        showError('Please paste some lab report text first.');
+        return;
+      }
+
+      setLoading(true, true);
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch('/api/reports/analyze-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Text analysis failed');
+        }
+        const timeTaken = ((performance.now() - t0) / 1000).toFixed(2);
+        renderResults(data, timeTaken);
+      } catch (err) {
+        showError(err.message || 'Error analyzing text.');
+      } finally {
+        setLoading(false, true);
+      }
+    }
+
+    // Render results
+    function renderResults(data, duration) {
+      currentResults = data;
+      document.getElementById('resultsEmpty').style.display = 'none';
+      document.getElementById('resultsActive').classList.add('show');
+
+      // Patient Demographics
+      const p = data.patient_info || {};
+      const pGrid = document.getElementById('patientGrid');
+      pGrid.innerHTML = `
+        <div>
+          <div class="patient-item-label">Name</div>
+          <div class="patient-item-val">${p.name || '—'}</div>
+        </div>
+        <div>
+          <div class="patient-item-label">Age / Sex</div>
+          <div class="patient-item-val">${p.age || '—'} / ${p.sex || '—'}</div>
+        </div>
+        <div>
+          <div class="patient-item-label">Report Date</div>
+          <div class="patient-item-val">${p.date || '—'}</div>
+        </div>
+        <div>
+          <div class="patient-item-label">Lab Facility</div>
+          <div class="patient-item-val">${p.lab_name || '—'}</div>
+        </div>
+        <div>
+          <div class="patient-item-label">Referring Doctor</div>
+          <div class="patient-item-val">${p.referring_doctor || '—'}</div>
+        </div>
+      `;
+
+      // Badge
+      const count = data.items_count || (data.extracted_items ? data.extracted_items.length : 0);
+      document.getElementById('itemsCountText').textContent =
+        `${count} Lab Test${count === 1 ? '' : 's'} Extracted (${duration}s)`;
+
+      // Render table
+      renderTableRows(data.extracted_items || []);
+
+      // Raw JSON
+      document.getElementById('jsonViewer').textContent = JSON.stringify(data, null, 2);
+    }
+
+    function renderTableRows(items) {
+      const tbody = document.getElementById('resultsTableBody');
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 2rem;">No items found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items.map((item, idx) => `
+        <tr>
+          <td class="td-num">${idx + 1}</td>
+          <td class="td-name">${escapeHtml(item.test_name || '—')}</td>
+          <td><span class="td-val">${escapeHtml(item.observed_value != null ? String(item.observed_value) : '—')}</span></td>
+          <td class="td-unit">${escapeHtml(item.unit || '—')}</td>
+          <td class="td-range">${escapeHtml(item.reference_range || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function filterResultsTable() {
+      if (!currentResults || !currentResults.extracted_items) return;
+      const q = document.getElementById('tableFilterInput').value.toLowerCase();
+      const filtered = currentResults.extracted_items.filter(item => {
+        const name = (item.test_name || '').toLowerCase();
+        const val = String(item.observed_value || '').toLowerCase();
+        const unit = (item.unit || '').toLowerCase();
+        const range = (item.reference_range || '').toLowerCase();
+        return name.includes(q) || val.includes(q) || unit.includes(q) || range.includes(q);
+      });
+      renderTableRows(filtered);
+    }
+
+    function copyJsonToClipboard(e) {
+      e.stopPropagation();
+      const jsonText = document.getElementById('jsonViewer').textContent;
+      navigator.clipboard.writeText(jsonText).then(() => {
+        alert('JSON copied to clipboard!');
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

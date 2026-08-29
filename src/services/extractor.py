@@ -170,10 +170,25 @@ async def _extract_from_docx(
 
     # ── extract tables ──
     tables_text = ""
+    table_direct_items: List[Dict[str, Any]] = []
+
     for table in document.tables:
         for row in table.rows:
             cells = [cell.text.strip() for cell in row.cells]
+            if not cells:
+                continue
             tables_text += " | ".join(cells) + "\n"
+            # If standard 4-column lab table: [Test, Value, Unit, Range]
+            if len(cells) >= 4:
+                header_check = cells[0].lower()
+                if header_check not in ("test name", "test", "investigation", "parameter", "name"):
+                    if cells[0] and cells[1]:
+                        table_direct_items.append({
+                            "test_name": cells[0],
+                            "observed_value": cells[1],
+                            "unit": _nullify(cells[2]),
+                            "reference_range": _nullify(cells[3]),
+                        })
 
     combined = paragraphs_text.strip()
     if tables_text.strip():
@@ -185,10 +200,17 @@ async def _extract_from_docx(
             len(paragraphs_text),
             len(tables_text),
         )
-        return await _extract_from_text(combined)
+        extracted, patient = await _extract_from_text(combined)
+        # If LLM didn't return items (e.g. offline/fallback), use direct table items if available
+        if not extracted and table_direct_items:
+            logger.info("Using %d direct table items from DOCX", len(table_direct_items))
+            extracted = table_direct_items
+            if not patient:
+                patient = _regex_patient_info(combined)
+        return extracted, patient
 
     logger.warning("DOCX appears empty or too short (%d chars)", len(combined))
-    return [], None
+    return table_direct_items, _regex_patient_info(combined)
 
 
 # ───────────────────────── PDF Extraction ───────────────────────────────────
@@ -298,12 +320,30 @@ async def _extract_from_text(
     if len(raw_text) > MAX_CHARS:
         raw_text = raw_text[:MAX_CHARS] + "\n… [truncated]"
 
+    prompt = EXTRACTION_PROMPT.format(text=raw_text)
+
+    # ── Fast direct path for Gemini via official google.genai Client ──
+    if settings.MODEL_PROVIDER.lower() == "gemini":
+        try:
+            from google.genai import types as genai_types
+
+            client = get_vision_model()
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(temperature=0.1),
+            )
+            return _parse_llm_json(response.text)
+        except Exception as exc:
+            logger.error("Gemini text extraction failed: %s — trying regex fallback", exc)
+            return _regex_fallback(raw_text), _regex_patient_info(raw_text)
+
+    # ── Path for Ollama / Groq via LangChain ChatModel ──
     try:
         llm = get_chat_model()
-        prompt = EXTRACTION_PROMPT.format(text=raw_text)
         response = await llm.ainvoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
-        # Gemini 3.6+ may return content as a list of parts
+        # Gemini / Chat models may return content as a list of parts
         if isinstance(content, list):
             text = "".join(
                 part if isinstance(part, str) else part.get("text", str(part))
@@ -397,22 +437,57 @@ _LAB_LINE = re.compile(
 )
 
 
+_PIPE_LINE = re.compile(
+    r"^\s*(?P<name>[^|\n\r]+?)\s*\|\s*(?P<value>[^|\n\r]+?)\s*(?:\|\s*(?P<unit>[^|\n\r]*?)\s*)?(?:\|\s*(?P<range>[^|\n\r]*?)\s*)?$",
+    re.MULTILINE,
+)
+
+
 def _regex_fallback(raw_text: str) -> List[Dict[str, Any]]:
     """
     Best-effort regex extractor for tabular lab-report formats::
 
         Hemoglobin          14.5       g/dL       12.0 - 16.0
+        Hemoglobin | 14.5 | g/dL | 12.0 - 16.0
     """
     results: List[Dict[str, Any]] = []
+    seen_names = set()
+
     for m in _LAB_LINE.finditer(raw_text):
-        results.append(
-            {
-                "test_name": m.group("name").strip().rstrip(":"),
-                "observed_value": m.group("value").strip(),
-                "unit": m.group("unit").strip(),
-                "reference_range": m.group("range").strip(),
-            }
-        )
+        name = m.group("name").strip().rstrip(":")
+        if name and name not in seen_names:
+            seen_names.add(name)
+            results.append(
+                {
+                    "test_name": name,
+                    "observed_value": m.group("value").strip(),
+                    "unit": _nullify(m.group("unit")),
+                    "reference_range": _nullify(m.group("range")),
+                }
+            )
+
+    # If no results from whitespace tabular, try pipe table pattern
+    if not results:
+        for m in _PIPE_LINE.finditer(raw_text):
+            name = m.group("name").strip()
+            val = m.group("value").strip()
+            if (
+                name.lower() in ("test name", "test", "investigation", "parameter", "name", "--- extracted tables ---")
+                or not name
+                or not val
+            ):
+                continue
+            if name not in seen_names:
+                seen_names.add(name)
+                results.append(
+                    {
+                        "test_name": name,
+                        "observed_value": val,
+                        "unit": _nullify(m.group("unit")),
+                        "reference_range": _nullify(m.group("range")),
+                    }
+                )
+
     logger.info("Regex fallback extracted %d items", len(results))
     return results
 
