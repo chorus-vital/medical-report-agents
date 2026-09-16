@@ -19,6 +19,18 @@ class LabResult(BaseModel):
     reference_range: Optional[str] = None
     flag: Literal["GREEN", "AMBER", "RED", "UNKNOWN"] = "UNKNOWN"
     explanation: Optional[str] = None
+    panel: Optional[str] = None
+    match_confidence: Optional[float] = Field(
+        default=None,
+        description="Agent 2's fuzzy-match score (0-100) against the local LOINC "
+        "ontology. Null when the row could not be confidently coded.",
+    )
+    range_source: Optional[str] = Field(
+        default=None,
+        description="Where the evaluated reference interval came from: "
+        "'report' (printed on the document), 'ontology_default' (sex-specific "
+        "or general fallback), 'qualitative', or 'none'.",
+    )
 
 
 class ReportAnalysis(BaseModel):
