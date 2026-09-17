@@ -1,8 +1,1141 @@
 {
   "_meta": {
     "description": "Embedded lab test ontology with LOINC codes and reference ranges",
-    "version": "1.0.0",
-    "coverage": "100+ standard lab tests (CBC, Lipid, LFT, KFT, Thyroid, Diabetes, Vitamins)"
+    "version": "1.1.0",
+    "coverage": "51 lab analytes across CBC, Lipid, LFT, KFT, Electrolytes, Thyroid, Diabetes, Vitamins, and simple qualitative urine tests",
+    "disclaimer": "LOINC codes and reference intervals were compiled from general clinical references for this educational capstone project. Verify against the official LOINC database (loinc.org) and a qualified lab/clinician before any real diagnostic or clinical use."
   },
-  "tests": []
+  "tests": [
+    {
+      "key": "hemoglobin",
+      "loinc_code": "718-7",
+      "standard_name": "Hemoglobin",
+      "aliases": [
+        "haemoglobin",
+        "hb",
+        "hemoglobin",
+        "hgb"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 13.0,
+          "high": 17.0
+        },
+        "female": {
+          "low": 12.0,
+          "high": 15.5
+        },
+        "default": {
+          "low": 12.0,
+          "high": 16.0
+        }
+      },
+      "explanation": "The protein in red blood cells that carries oxygen around the body."
+    },
+    {
+      "key": "pcv",
+      "loinc_code": "4544-3",
+      "standard_name": "Packed Cell Volume",
+      "aliases": [
+        "haematocrit",
+        "hct",
+        "hematocrit",
+        "packed cell volume",
+        "pcv"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 40.0,
+          "high": 50.0
+        },
+        "female": {
+          "low": 36.0,
+          "high": 46.0
+        },
+        "default": {
+          "low": 38.0,
+          "high": 48.0
+        }
+      },
+      "explanation": "The percentage of blood volume made up of red blood cells."
+    },
+    {
+      "key": "rbc_count",
+      "loinc_code": "789-8",
+      "standard_name": "Total RBC Count",
+      "aliases": [
+        "rbc",
+        "rbc count",
+        "rbc_count",
+        "red blood cell count",
+        "total rbc count"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "mill/mm3",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 4.5,
+          "high": 5.5
+        },
+        "female": {
+          "low": 4.0,
+          "high": 5.0
+        },
+        "default": {
+          "low": 4.0,
+          "high": 5.5
+        }
+      },
+      "explanation": "The number of oxygen-carrying red blood cells in the blood."
+    },
+    {
+      "key": "wbc_count",
+      "loinc_code": "6690-2",
+      "standard_name": "Total WBC Count",
+      "aliases": [
+        "tlc",
+        "total leukocyte count",
+        "total wbc count",
+        "wbc",
+        "wbc count",
+        "wbc_count",
+        "white blood cell count"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 4000,
+          "high": 11000
+        }
+      },
+      "explanation": "The number of infection-fighting white blood cells in the blood."
+    },
+    {
+      "key": "platelet_count",
+      "loinc_code": "777-3",
+      "standard_name": "Platelet Count",
+      "aliases": [
+        "platelet count",
+        "platelet_count",
+        "platelets"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 150000,
+          "high": 400000
+        }
+      },
+      "explanation": "Cell fragments in blood that help it clot."
+    },
+    {
+      "key": "mpv",
+      "loinc_code": "32623-1",
+      "standard_name": "Mean Platelet Volume",
+      "aliases": [
+        "mean platelet volume",
+        "mpv"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "fL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 7.5,
+          "high": 11.5
+        }
+      },
+      "explanation": "The average size of platelets in the blood."
+    },
+    {
+      "key": "plateletcrit",
+      "loinc_code": "51637-7",
+      "standard_name": "Plateletcrit",
+      "aliases": [
+        "plateletcrit",
+        "platelet hematocrit",
+        "platelet haematocrit",
+        "pct"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.19,
+          "high": 0.36
+        }
+      },
+      "explanation": "The percentage of blood volume made up of platelets."
+    },
+    {
+      "key": "nlr",
+      "loinc_code": null,
+      "standard_name": "Neutrophil Lymphocyte Ratio",
+      "aliases": [
+        "neutrophil lymphocyte ratio",
+        "neutrophil to lymphocyte ratio",
+        "nlr"
+      ],
+      "panel": "Differential Count",
+      "unit": "Ratio",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.78,
+          "high": 3.53
+        }
+      },
+      "explanation": "A ratio of two white blood cell types, used as a marker of inflammation."
+    },
+    {
+      "key": "mcv",
+      "loinc_code": "787-2",
+      "standard_name": "Mean Corpuscular Volume",
+      "aliases": [
+        "mcv",
+        "mean corpuscular volume"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "fL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 80.0,
+          "high": 100.0
+        }
+      },
+      "explanation": "The average size of a single red blood cell."
+    },
+    {
+      "key": "mch",
+      "loinc_code": "785-6",
+      "standard_name": "Mean Corpuscular Hemoglobin",
+      "aliases": [
+        "mch",
+        "mean corpuscular hemoglobin"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "pg",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 27.0,
+          "high": 32.0
+        }
+      },
+      "explanation": "The average amount of hemoglobin inside one red blood cell."
+    },
+    {
+      "key": "mchc",
+      "loinc_code": "786-4",
+      "standard_name": "Mean Corpuscular Hemoglobin Concentration",
+      "aliases": [
+        "mchc",
+        "mean corpuscular hemoglobin concentration"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 32.0,
+          "high": 36.0
+        }
+      },
+      "explanation": "The average concentration of hemoglobin inside red blood cells."
+    },
+    {
+      "key": "rdw",
+      "loinc_code": "788-0",
+      "standard_name": "Red Cell Distribution Width",
+      "aliases": [
+        "rdw",
+        "rdw cv",
+        "rdw-cv",
+        "red cell distribution width"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 11.6,
+          "high": 14.0
+        }
+      },
+      "explanation": "How much red blood cells vary in size from one another."
+    },
+    {
+      "key": "esr",
+      "loinc_code": "30341-2",
+      "standard_name": "Erythrocyte Sedimentation Rate",
+      "aliases": [
+        "erythrocyte sedimentation rate",
+        "esr"
+      ],
+      "panel": "Complete Blood Count (CBC)",
+      "unit": "mm/hr",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 0,
+          "high": 15
+        },
+        "female": {
+          "low": 0,
+          "high": 20
+        },
+        "default": {
+          "low": 0,
+          "high": 15
+        }
+      },
+      "explanation": "A general marker of inflammation in the body."
+    },
+    {
+      "key": "neutrophils_pct",
+      "loinc_code": "770-8",
+      "standard_name": "Neutrophils",
+      "aliases": [
+        "neutrophils",
+        "neutrophils_pct"
+      ],
+      "panel": "Differential Count",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 40,
+          "high": 70
+        }
+      },
+      "explanation": "Percentage of white blood cells that fight bacterial infection."
+    },
+    {
+      "key": "lymphocytes_pct",
+      "loinc_code": "736-9",
+      "standard_name": "Lymphocytes",
+      "aliases": [
+        "lymphocytes",
+        "lymphocytes_pct"
+      ],
+      "panel": "Differential Count",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 20,
+          "high": 40
+        }
+      },
+      "explanation": "Percentage of white blood cells central to immune defence."
+    },
+    {
+      "key": "monocytes_pct",
+      "loinc_code": "5905-5",
+      "standard_name": "Monocytes",
+      "aliases": [
+        "monocytes",
+        "monocytes_pct"
+      ],
+      "panel": "Differential Count",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 2,
+          "high": 8
+        }
+      },
+      "explanation": "Percentage of white blood cells that clean up debris and infection."
+    },
+    {
+      "key": "eosinophils_pct",
+      "loinc_code": "713-8",
+      "standard_name": "Eosinophils",
+      "aliases": [
+        "eosinophils",
+        "eosinophils_pct"
+      ],
+      "panel": "Differential Count",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 1,
+          "high": 6
+        }
+      },
+      "explanation": "Percentage of white blood cells involved in allergic response and parasites."
+    },
+    {
+      "key": "basophils_pct",
+      "loinc_code": "706-2",
+      "standard_name": "Basophils",
+      "aliases": [
+        "basophils",
+        "basophils_pct"
+      ],
+      "panel": "Differential Count",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0,
+          "high": 2
+        }
+      },
+      "explanation": "Percentage of white blood cells involved in allergic/inflammatory response."
+    },
+    {
+      "key": "anc",
+      "loinc_code": "751-8",
+      "standard_name": "Absolute Neutrophil Count",
+      "aliases": [
+        "absolute neutrophil count",
+        "anc"
+      ],
+      "panel": "Absolute Differential Counts",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 2000,
+          "high": 7000
+        }
+      },
+      "explanation": "The actual number (not just percentage) of neutrophils."
+    },
+    {
+      "key": "alc",
+      "loinc_code": "731-0",
+      "standard_name": "Absolute Lymphocyte Count",
+      "aliases": [
+        "absolute lymphocyte count",
+        "alc"
+      ],
+      "panel": "Absolute Differential Counts",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 1000,
+          "high": 3000
+        }
+      },
+      "explanation": "The actual number of lymphocytes."
+    },
+    {
+      "key": "amc",
+      "loinc_code": "742-7",
+      "standard_name": "Absolute Monocyte Count",
+      "aliases": [
+        "absolute monocyte count",
+        "amc"
+      ],
+      "panel": "Absolute Differential Counts",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 200,
+          "high": 1000
+        }
+      },
+      "explanation": "The actual number of monocytes."
+    },
+    {
+      "key": "aec",
+      "loinc_code": "711-2",
+      "standard_name": "Absolute Eosinophil Count",
+      "aliases": [
+        "absolute eosinophil count",
+        "aec"
+      ],
+      "panel": "Absolute Differential Counts",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 20,
+          "high": 500
+        }
+      },
+      "explanation": "The actual number of eosinophils."
+    },
+    {
+      "key": "abc",
+      "loinc_code": "704-7",
+      "standard_name": "Absolute Basophil Count",
+      "aliases": [
+        "abc",
+        "absolute basophil count"
+      ],
+      "panel": "Absolute Differential Counts",
+      "unit": "/mm3",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0,
+          "high": 100
+        }
+      },
+      "explanation": "The actual number of basophils."
+    },
+    {
+      "key": "total_cholesterol",
+      "loinc_code": "2093-3",
+      "standard_name": "Total Cholesterol",
+      "aliases": [
+        "cholesterol",
+        "total cholesterol",
+        "total_cholesterol"
+      ],
+      "panel": "Lipid Profile",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "high": 200
+        }
+      },
+      "explanation": "The total amount of cholesterol carried in the blood."
+    },
+    {
+      "key": "hdl_cholesterol",
+      "loinc_code": "2085-9",
+      "standard_name": "HDL Cholesterol",
+      "aliases": [
+        "hdl",
+        "hdl cholesterol",
+        "hdl_cholesterol"
+      ],
+      "panel": "Lipid Profile",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 40,
+          "high": 60
+        }
+      },
+      "explanation": "\"Good\" cholesterol that helps remove other cholesterol from the bloodstream."
+    },
+    {
+      "key": "ldl_cholesterol",
+      "loinc_code": "2089-1",
+      "standard_name": "LDL Cholesterol",
+      "aliases": [
+        "ldl",
+        "ldl cholesterol",
+        "ldl_cholesterol"
+      ],
+      "panel": "Lipid Profile",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "high": 100
+        }
+      },
+      "explanation": "\"Bad\" cholesterol that can build up in artery walls."
+    },
+    {
+      "key": "triglycerides",
+      "loinc_code": "2571-8",
+      "standard_name": "Triglycerides",
+      "aliases": [
+        "triglycerides"
+      ],
+      "panel": "Lipid Profile",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "high": 150
+        }
+      },
+      "explanation": "A type of fat in the blood used for energy."
+    },
+    {
+      "key": "vldl_cholesterol",
+      "loinc_code": "13457-7",
+      "standard_name": "VLDL Cholesterol",
+      "aliases": [
+        "vldl",
+        "vldl cholesterol",
+        "vldl_cholesterol"
+      ],
+      "panel": "Lipid Profile",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "high": 30
+        }
+      },
+      "explanation": "A cholesterol carrier that mainly transports triglycerides."
+    },
+    {
+      "key": "sgot_ast",
+      "loinc_code": "1920-8",
+      "standard_name": "SGOT (AST)",
+      "aliases": [
+        "aspartate aminotransferase",
+        "ast",
+        "sgot",
+        "sgot (ast)",
+        "sgot_ast"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "U/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 10,
+          "high": 40
+        }
+      },
+      "explanation": "A liver enzyme; raised levels can indicate liver or muscle stress."
+    },
+    {
+      "key": "sgpt_alt",
+      "loinc_code": "1742-6",
+      "standard_name": "SGPT (ALT)",
+      "aliases": [
+        "alanine aminotransferase",
+        "alt",
+        "sgpt",
+        "sgpt (alt)",
+        "sgpt_alt"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "U/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 10,
+          "high": 40
+        }
+      },
+      "explanation": "A liver enzyme fairly specific to liver cell damage."
+    },
+    {
+      "key": "alkaline_phosphatase",
+      "loinc_code": "6768-6",
+      "standard_name": "Alkaline Phosphatase",
+      "aliases": [
+        "alkaline phosphatase",
+        "alkaline_phosphatase",
+        "alp"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "U/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 44,
+          "high": 147
+        }
+      },
+      "explanation": "An enzyme linked to liver and bone health."
+    },
+    {
+      "key": "total_bilirubin",
+      "loinc_code": "1975-2",
+      "standard_name": "Total Bilirubin",
+      "aliases": [
+        "bilirubin total",
+        "total bilirubin",
+        "total_bilirubin"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.1,
+          "high": 1.2
+        }
+      },
+      "explanation": "A byproduct of red blood cell breakdown, processed by the liver."
+    },
+    {
+      "key": "direct_bilirubin",
+      "loinc_code": "1968-7",
+      "standard_name": "Direct Bilirubin",
+      "aliases": [
+        "bilirubin direct",
+        "conjugated bilirubin",
+        "direct bilirubin",
+        "direct_bilirubin"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.0,
+          "high": 0.3
+        }
+      },
+      "explanation": "The processed (conjugated) form of bilirubin."
+    },
+    {
+      "key": "total_protein",
+      "loinc_code": "2885-2",
+      "standard_name": "Total Protein",
+      "aliases": [
+        "total protein",
+        "total_protein"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 6.0,
+          "high": 8.3
+        }
+      },
+      "explanation": "The combined amount of albumin and globulin proteins in blood."
+    },
+    {
+      "key": "albumin",
+      "loinc_code": "1751-7",
+      "standard_name": "Albumin",
+      "aliases": [
+        "albumin"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 3.5,
+          "high": 5.5
+        }
+      },
+      "explanation": "A key blood protein made by the liver."
+    },
+    {
+      "key": "blood_urea",
+      "loinc_code": "3094-0",
+      "standard_name": "Blood Urea",
+      "aliases": [
+        "blood urea",
+        "blood_urea",
+        "urea"
+      ],
+      "panel": "Kidney Function Test (KFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 15,
+          "high": 40
+        }
+      },
+      "explanation": "A waste product filtered by the kidneys."
+    },
+    {
+      "key": "serum_creatinine",
+      "loinc_code": "2160-0",
+      "standard_name": "Serum Creatinine",
+      "aliases": [
+        "creatinine",
+        "serum creatinine",
+        "serum_creatinine"
+      ],
+      "panel": "Kidney Function Test (KFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 0.7,
+          "high": 1.3
+        },
+        "female": {
+          "low": 0.6,
+          "high": 1.1
+        },
+        "default": {
+          "low": 0.6,
+          "high": 1.3
+        }
+      },
+      "explanation": "A waste product from muscle activity, filtered by the kidneys."
+    },
+    {
+      "key": "uric_acid",
+      "loinc_code": "3084-1",
+      "standard_name": "Uric Acid",
+      "aliases": [
+        "uric acid",
+        "uric_acid"
+      ],
+      "panel": "Kidney Function Test (KFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 3.5,
+          "high": 7.2
+        },
+        "female": {
+          "low": 2.6,
+          "high": 6.0
+        },
+        "default": {
+          "low": 3.5,
+          "high": 7.0
+        }
+      },
+      "explanation": "A waste product; high levels are linked to gout."
+    },
+    {
+      "key": "egfr",
+      "loinc_code": "33914-3",
+      "standard_name": "eGFR",
+      "aliases": [
+        "egfr",
+        "estimated glomerular filtration rate"
+      ],
+      "panel": "Kidney Function Test (KFT)",
+      "unit": "mL/min",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 90
+        }
+      },
+      "explanation": "An estimate of how well the kidneys are filtering blood."
+    },
+    {
+      "key": "sodium",
+      "loinc_code": "2951-2",
+      "standard_name": "Sodium",
+      "aliases": [
+        "na",
+        "sodium"
+      ],
+      "panel": "Electrolytes",
+      "unit": "mEq/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 135,
+          "high": 145
+        }
+      },
+      "explanation": "An electrolyte that helps balance fluids in the body."
+    },
+    {
+      "key": "potassium",
+      "loinc_code": "2823-3",
+      "standard_name": "Potassium",
+      "aliases": [
+        "k",
+        "potassium"
+      ],
+      "panel": "Electrolytes",
+      "unit": "mEq/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 3.5,
+          "high": 5.1
+        }
+      },
+      "explanation": "An electrolyte important for heart and muscle function."
+    },
+    {
+      "key": "chloride",
+      "loinc_code": "2075-0",
+      "standard_name": "Chloride",
+      "aliases": [
+        "chloride",
+        "cl"
+      ],
+      "panel": "Electrolytes",
+      "unit": "mEq/L",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 98,
+          "high": 107
+        }
+      },
+      "explanation": "An electrolyte that helps maintain fluid and acid-base balance."
+    },
+    {
+      "key": "tsh",
+      "loinc_code": "3016-3",
+      "standard_name": "TSH",
+      "aliases": [
+        "thyroid stimulating hormone",
+        "tsh"
+      ],
+      "panel": "Thyroid Profile",
+      "unit": "µIU/mL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.4,
+          "high": 4.0
+        }
+      },
+      "explanation": "A pituitary hormone that signals the thyroid to make more/less hormone."
+    },
+    {
+      "key": "free_t4",
+      "loinc_code": "3024-7",
+      "standard_name": "Free T4",
+      "aliases": [
+        "free t4",
+        "free_t4",
+        "ft4"
+      ],
+      "panel": "Thyroid Profile",
+      "unit": "ng/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.8,
+          "high": 1.8
+        }
+      },
+      "explanation": "The active, unbound form of the main thyroid hormone thyroxine."
+    },
+    {
+      "key": "free_t3",
+      "loinc_code": "3053-6",
+      "standard_name": "Free T3",
+      "aliases": [
+        "free t3",
+        "free_t3",
+        "ft3"
+      ],
+      "panel": "Thyroid Profile",
+      "unit": "pg/mL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 2.3,
+          "high": 4.2
+        }
+      },
+      "explanation": "The active, unbound form of the thyroid hormone triiodothyronine."
+    },
+    {
+      "key": "fasting_glucose",
+      "loinc_code": "1558-6",
+      "standard_name": "Fasting Blood Glucose",
+      "aliases": [
+        "fasting blood glucose",
+        "fasting glucose",
+        "fasting_glucose",
+        "fbs"
+      ],
+      "panel": "Blood Sugar / Diabetes Panel",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 70,
+          "high": 100
+        }
+      },
+      "explanation": "Blood sugar level after not eating for several hours."
+    },
+    {
+      "key": "ppbs_glucose",
+      "loinc_code": "1521-4",
+      "standard_name": "Post Prandial Blood Glucose",
+      "aliases": [
+        "post prandial blood glucose",
+        "postprandial glucose",
+        "ppbs",
+        "ppbs_glucose"
+      ],
+      "panel": "Blood Sugar / Diabetes Panel",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 70,
+          "high": 140
+        }
+      },
+      "explanation": "Blood sugar level about two hours after eating."
+    },
+    {
+      "key": "hba1c",
+      "loinc_code": "4548-4",
+      "standard_name": "HbA1c",
+      "aliases": [
+        "glycated hemoglobin",
+        "glycosylated hemoglobin",
+        "hba1c"
+      ],
+      "panel": "Blood Sugar / Diabetes Panel",
+      "unit": "%",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "high": 5.7
+        }
+      },
+      "explanation": "A 2-3 month average of blood sugar control."
+    },
+    {
+      "key": "vitamin_d",
+      "loinc_code": "1989-3",
+      "standard_name": "Vitamin D (25-OH)",
+      "aliases": [
+        "25-oh vitamin d",
+        "vitamin d",
+        "vitamin d (25-oh)",
+        "vitamin_d"
+      ],
+      "panel": "Vitamins & Iron Studies",
+      "unit": "ng/mL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 30.0,
+          "high": 100.0
+        }
+      },
+      "explanation": "A vitamin important for bone health, made mostly from sunlight exposure."
+    },
+    {
+      "key": "vitamin_b12",
+      "loinc_code": "2132-9",
+      "standard_name": "Vitamin B12",
+      "aliases": [
+        "b12",
+        "vitamin b12",
+        "vitamin_b12"
+      ],
+      "panel": "Vitamins & Iron Studies",
+      "unit": "pg/mL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 200,
+          "high": 900
+        }
+      },
+      "explanation": "A vitamin essential for nerve function and red blood cell formation."
+    },
+    {
+      "key": "iron",
+      "loinc_code": "2498-4",
+      "standard_name": "Iron",
+      "aliases": [
+        "iron",
+        "serum iron"
+      ],
+      "panel": "Vitamins & Iron Studies",
+      "unit": "µg/dL",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 65,
+          "high": 175
+        },
+        "female": {
+          "low": 50,
+          "high": 170
+        },
+        "default": {
+          "low": 60,
+          "high": 170
+        }
+      },
+      "explanation": "The amount of iron circulating in the blood."
+    },
+    {
+      "key": "ferritin",
+      "loinc_code": "2276-4",
+      "standard_name": "Ferritin",
+      "aliases": [
+        "ferritin"
+      ],
+      "panel": "Vitamins & Iron Studies",
+      "unit": "ng/mL",
+      "kind": "numeric",
+      "reference": {
+        "male": {
+          "low": 20,
+          "high": 250
+        },
+        "female": {
+          "low": 10,
+          "high": 120
+        },
+        "default": {
+          "low": 20,
+          "high": 250
+        }
+      },
+      "explanation": "The body's main iron-storage protein; a low level often signals iron deficiency before anemia appears."
+    },
+    {
+      "key": "urine_sugar",
+      "loinc_code": null,
+      "standard_name": "Urine Sugar",
+      "aliases": [
+        "urine glucose",
+        "urine sugar",
+        "urine_sugar"
+      ],
+      "panel": "Urine / Qualitative Tests",
+      "unit": null,
+      "kind": "qualitative",
+      "reference": {},
+      "explanation": "Whether glucose is detectable in urine.",
+      "normal_values": [
+        "nil",
+        "absent",
+        "negative",
+        "not detected"
+      ]
+    },
+    {
+      "key": "urine_albumin",
+      "loinc_code": null,
+      "standard_name": "Urine Albumin",
+      "aliases": [
+        "urine albumin",
+        "urine protein",
+        "urine_albumin"
+      ],
+      "panel": "Urine / Qualitative Tests",
+      "unit": null,
+      "kind": "qualitative",
+      "reference": {},
+      "explanation": "Whether protein is detectable in urine.",
+      "normal_values": [
+        "nil",
+        "absent",
+        "negative",
+        "not detected",
+        "trace"
+      ]
+    }
+  ]
 }

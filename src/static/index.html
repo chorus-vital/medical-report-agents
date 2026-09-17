@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Medical Report Analyzer — Agent 1 Tester</title>
+  <title>Medical Report Analyzer — Agent 1 + 2 Tester</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -237,6 +237,12 @@
       background: var(--card-bg);
       color: var(--text-dim);
       border: 1px dashed var(--card-border);
+    }
+
+    .flow-step.done {
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--accent);
+      border: 1px solid rgba(16, 185, 129, 0.35);
     }
 
     .flow-arrow {
@@ -708,6 +714,65 @@
       font-size: 0.76rem;
     }
 
+    .td-loinc {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .td-loinc .std-name {
+      display: block;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      margin-top: 0.1rem;
+    }
+
+    /* Agent 2 flag badges — GREEN/AMBER/RED/UNKNOWN from terminology.py */
+    .flag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .flag-badge::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .flag-GREEN {
+      color: var(--accent);
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .flag-AMBER {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .flag-RED {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .flag-UNKNOWN {
+      color: var(--text-dim);
+      background: rgba(100, 116, 139, 0.14);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+    }
+
     /* ── JSON Accordion ── */
     details.json-accordion {
       background: #0b1120;
@@ -789,7 +854,7 @@
         <div class="brand-icon">🔬</div>
         <div>
           <div class="brand-title">Medical Report Analyzer</div>
-          <div class="brand-subtitle">Agent 1 · Ingestion & Extraction Tester</div>
+          <div class="brand-subtitle">Agent 1 + 2 · Extraction, Terminology & Flagging Tester</div>
         </div>
       </div>
       <div class="header-actions">
@@ -807,15 +872,15 @@
   <main>
     <div class="intro-banner">
       <div class="intro-text">
-        <h1>Agent 1 Interactive Verification</h1>
-        <p>Test document parsing (PDF, DOCX, Images, Text) and structured lab extraction powered by Gemini / Regex fallback.</p>
+        <h1>Agent 1 + 2 Interactive Verification</h1>
+        <p>Test document parsing & structured lab extraction (Gemini / Regex fallback), then LOINC coding and GREEN/AMBER/RED flagging against the local ontology.</p>
       </div>
       <div class="flow-steps">
-        <span class="flow-step active">1. Ingestion & Extract</span>
+        <span class="flow-step pending" id="flowStep1">1. Ingestion & Extract</span>
         <span class="flow-arrow">➔</span>
-        <span class="flow-step pending">2. Ground & Flag</span>
+        <span class="flow-step pending" id="flowStep2">2. Ground & Flag</span>
         <span class="flow-arrow">➔</span>
-        <span class="flow-step pending">3. Reason & Verify</span>
+        <span class="flow-step pending" id="flowStep3">3. Reason & Verify</span>
       </div>
     </div>
 
@@ -856,7 +921,7 @@
 
           <button class="btn-submit" id="btnSubmitFile" onclick="submitFileAnalysis()">
             <span class="spinner" id="fileSpinner"></span>
-            <span id="btnSubmitText">🚀 Run Agent 1 Extraction</span>
+            <span id="btnSubmitText">🚀 Run Extraction + Grounding</span>
           </button>
 
           <!-- Quick Samples -->
@@ -886,7 +951,7 @@
           <textarea class="paste-area" id="pasteArea" placeholder="Paste your lab report text here... (e.g. Hemoglobin 14.5 g/dL 12.0 - 16.0)"></textarea>
           <button class="btn-submit" id="btnSubmitTextTab" onclick="submitTextAnalysis()">
             <span class="spinner" id="textSpinner"></span>
-            <span>🚀 Run Agent 1 on Text</span>
+            <span>🚀 Run Extraction + Grounding on Text</span>
           </button>
         </div>
       </section>
@@ -894,15 +959,15 @@
       <!-- ── Right Column: Extraction Results ── -->
       <section class="card">
         <div class="card-title">
-          <span>📊 Extraction Output</span>
+          <span>📊 Extraction & Grounding Output</span>
         </div>
 
         <!-- Empty state placeholder -->
         <div class="results-empty" id="resultsEmpty">
           <div class="results-empty-icon">🧪</div>
-          <h3>No Extraction Results Yet</h3>
+          <h3>No Results Yet</h3>
           <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.35rem;">
-            Upload a file or choose a sample report on the left to test Agent 1.
+            Upload a file or choose a sample report on the left to test Agent 1 + 2.
           </p>
         </div>
 
@@ -927,6 +992,7 @@
               <span style="font-size: 1rem;">✅</span>
               <span id="itemsCountText">0 Tests Extracted</span>
             </div>
+            <div id="groundingSummary" style="display:none; font-size:0.78rem; color: var(--text-muted); margin-left: 0.75rem;"></div>
             <div class="search-box">
               <span class="search-icon">🔍</span>
               <input type="text" class="search-input" id="tableFilterInput" placeholder="Filter lab tests..." oninput="filterResultsTable()" />
@@ -941,9 +1007,11 @@
                   <th class="td-num">#</th>
                   <th>Panel</th>
                   <th>Test Name</th>
+                  <th>LOINC</th>
                   <th>Observed Value</th>
                   <th>Unit</th>
                   <th>Reference Range</th>
+                  <th>Flag</th>
                 </tr>
               </thead>
               <tbody id="resultsTableBody">
@@ -1168,6 +1236,7 @@
       document.getElementById('resultsActive').classList.add('show');
 
       renderExtractionBanner(data);
+      renderFlowSteps(data);
 
       // Patient Demographics
       const p = data.patient_info || {};
@@ -1194,8 +1263,13 @@
       document.getElementById('itemsCountText').textContent =
         `${count} Lab Test${count === 1 ? '' : 's'} Extracted (${duration}s)`;
 
-      // Render table
-      renderTableRows(data.extracted_items || []);
+      // Render table — Agent 2's coded/flagged rows (lab_results) take priority
+      // over Agent 1's raw extraction; fall back only if grounding produced nothing.
+      const rows = (data.lab_results && data.lab_results.length)
+        ? data.lab_results
+        : (data.extracted_items || []);
+      renderTableRows(rows);
+      renderGroundingSummary(data.grounding);
 
       // Raw JSON
       document.getElementById('jsonViewer').textContent = JSON.stringify(data, null, 2);
@@ -1242,10 +1316,43 @@
       banner.style.display = 'block';
     }
 
+    // Agent 2's per-row output — LOINC code + GREEN/AMBER/RED/UNKNOWN flag.
+    // renderTableRows() also accepts plain extracted_items rows (no flag/loinc_code),
+    // in which case those two cells just render as placeholders.
+    function flagBadge(flag) {
+      if (!flag) return '<span class="flag-badge flag-UNKNOWN">UNKNOWN</span>';
+      return `<span class="flag-badge flag-${escapeHtml(flag)}">${escapeHtml(flag)}</span>`;
+    }
+
+    // Step 1 (extraction) and step 2 (grounding) are both live; step 3
+    // (reason_and_verify_node) is still a placeholder in the pipeline, so it
+    // never lights up here regardless of what a run returns.
+    function renderFlowSteps(data) {
+      const step1 = document.getElementById('flowStep1');
+      const step2 = document.getElementById('flowStep2');
+      step1.className = 'flow-step ' + ((data.extracted_items || []).length ? 'done' : 'active');
+      step2.className = 'flow-step ' + ((data.lab_results || []).length ? 'done' : 'pending');
+    }
+
+    function renderGroundingSummary(grounding) {
+      const el = document.getElementById('groundingSummary');
+      if (!grounding) {
+        el.style.display = 'none';
+        return;
+      }
+      const fs = grounding.flag_summary || {};
+      const parts = [`${grounding.loinc_coded_count}/${grounding.loinc_coded_of} coded to LOINC`];
+      ['RED', 'AMBER', 'GREEN', 'UNKNOWN'].forEach(f => {
+        if (fs[f]) parts.push(`${fs[f]} ${f}`);
+      });
+      el.textContent = '· ' + parts.join(' · ');
+      el.style.display = 'block';
+    }
+
     function renderTableRows(items) {
       const tbody = document.getElementById('resultsTableBody');
       if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">No items found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No items found</td></tr>`;
         return;
       }
 
@@ -1254,20 +1361,25 @@
           <td class="td-num">${idx + 1}</td>
           <td class="td-unit">${escapeHtml(item.panel || '—')}</td>
           <td class="td-name" ${item.method ? `title="Method: ${escapeHtml(item.method)}"` : ''}>${escapeHtml(item.test_name || '—')}</td>
+          <td class="td-loinc">${item.loinc_code ? escapeHtml(item.loinc_code) : '—'}${item.standard_name && item.standard_name !== item.test_name ? `<span class="std-name">${escapeHtml(item.standard_name)}</span>` : ''}</td>
           <td><span class="td-val">${escapeHtml(item.observed_value != null ? String(item.observed_value) : '—')}</span></td>
           <td class="td-unit">${escapeHtml(item.unit || '—')}</td>
           <td class="td-range">${escapeHtml(item.reference_range || '—')}</td>
+          <td>${flagBadge(item.flag)}</td>
         </tr>
       `).join('');
     }
 
     function filterResultsTable() {
-      if (!currentResults || !currentResults.extracted_items) return;
+      if (!currentResults) return;
+      const sourceRows = (currentResults.lab_results && currentResults.lab_results.length)
+        ? currentResults.lab_results
+        : (currentResults.extracted_items || []);
       const q = document.getElementById('tableFilterInput').value.toLowerCase();
-      const filtered = currentResults.extracted_items.filter(item => {
+      const filtered = sourceRows.filter(item => {
         const haystack = [
-          item.test_name, item.observed_value, item.unit,
-          item.reference_range, item.panel, item.method,
+          item.test_name, item.standard_name, item.loinc_code, item.observed_value,
+          item.unit, item.reference_range, item.panel, item.method, item.flag,
         ].map(v => String(v || '').toLowerCase()).join(' ');
         return haystack.includes(q);
       });
