@@ -1,8 +1,76 @@
 {
   "_meta": {
-    "description": "Embedded lab test ontology with LOINC codes and reference ranges",
-    "version": "1.0.0",
-    "coverage": "100+ standard lab tests (CBC, Lipid, LFT, KFT, Thyroid, Diabetes, Vitamins)"
+    "description": "Embedded lab test ontology with LOINC codes, reference ranges, and critical/panic thresholds",
+    "version": "3.0.0",
+    "coverage": "55 lab tests (CBC, Lipid, LFT, KFT, Electrolytes, Thyroid, Diabetes, Vitamins, Iron studies, Inflammation markers, Urine panel)"
   },
-  "tests": []
+  "tests": [
+    { "standard_name": "Red Blood Cell Count", "aliases": ["RBC", "Red Blood Cells (RBC) Count", "RBC Count", "Erythrocyte Count", "Total RBC Count"], "loinc_code": "789-8", "unit": "mill/mm3", "reference_range": { "default": "4.5-5.5" }, "panel": "CBC" },
+    { "standard_name": "Hemoglobin", "aliases": ["Hb", "Hemoglobin (Hb)", "Haemoglobin", "HGB"], "loinc_code": "718-7", "unit": "g/dL", "reference_range": { "male": "13.0-17.0", "female": "12.0-15.5", "default": "12.0-17.0" }, "panel": "CBC", "critical": { "low": 7.0, "high": 23.0 } },
+    { "standard_name": "Hematocrit", "aliases": ["HCT", "Hematocrit (HCT)", "Packed Cell Volume", "PCV"], "loinc_code": "4544-3", "unit": "%", "reference_range": { "male": "40-50", "female": "36-46", "default": "36-50" }, "panel": "CBC" },
+    { "standard_name": "Mean Corpuscular Volume", "aliases": ["MCV", "Mean Corpuscular Volume (MCV)"], "loinc_code": "787-2", "unit": "fL", "reference_range": { "default": "83-101" }, "panel": "CBC" },
+    { "standard_name": "Mean Corpuscular Hemoglobin", "aliases": ["MCH", "Mean Corpuscular Hemoglobin (MCH)"], "loinc_code": "785-6", "unit": "pg", "reference_range": { "default": "27-32" }, "panel": "CBC" },
+    { "standard_name": "Mean Corpuscular Hemoglobin Concentration", "aliases": ["MCHC", "Mean Corpuscular Hemoglobin Concentration (MCHC)"], "loinc_code": "786-4", "unit": "g/dL", "reference_range": { "default": "31.5-34.5" }, "panel": "CBC" },
+    { "standard_name": "Red Cell Distribution Width", "aliases": ["RDW", "RDW-CV", "Red Cell Distribution Width (RDW) CV"], "loinc_code": "788-0", "unit": "%", "reference_range": { "default": "11.6-14.0" }, "panel": "CBC" },
+    { "standard_name": "Total White Blood Cell Count", "aliases": ["TC", "Total White Blood Cell Count (TC)", "WBC", "WBC Count", "Total Leukocyte Count", "Total WBC Count"], "loinc_code": "6690-2", "unit": "cells/mm3", "reference_range": { "default": "4000-10000" }, "panel": "CBC", "critical": { "low": 2000, "high": 30000 } },
+    { "standard_name": "Neutrophils", "aliases": ["Neutrophils", "Neutrophils %"], "loinc_code": "768-2", "unit": "%", "reference_range": { "default": "40-80" }, "panel": "Differential Count" },
+    { "standard_name": "Lymphocytes", "aliases": ["Lymphocytes", "Lymphocytes %"], "loinc_code": "736-9", "unit": "%", "reference_range": { "default": "20-40" }, "panel": "Differential Count" },
+    { "standard_name": "Monocytes", "aliases": ["Monocytes", "Monocytes %"], "loinc_code": "5905-5", "unit": "%", "reference_range": { "default": "2-10" }, "panel": "Differential Count" },
+    { "standard_name": "Eosinophils", "aliases": ["Eosinophils", "Eosinophils %"], "loinc_code": "713-8", "unit": "%", "reference_range": { "default": "1-6" }, "panel": "Differential Count" },
+    { "standard_name": "Basophils", "aliases": ["Basophils", "Basophils %"], "loinc_code": "706-2", "unit": "%", "reference_range": { "default": "0-2" }, "panel": "Differential Count" },
+    { "standard_name": "Absolute Neutrophil Count", "aliases": ["ANC", "Absolute Neutrophil Count (ANC)"], "loinc_code": "769-0", "unit": "/mm3", "reference_range": { "default": "2000-7000" }, "panel": "Differential Count", "critical": { "low": 500 } },
+    { "standard_name": "Absolute Lymphocyte Count", "aliases": ["ALC", "Absolute Lymphocyte Count (ALC)"], "loinc_code": "731-0", "unit": "/mm3", "reference_range": { "default": "1000-3000" }, "panel": "Differential Count" },
+    { "standard_name": "Absolute Monocyte Count", "aliases": ["AMC", "Absolute Monocyte Count (AMC)"], "loinc_code": "742-7", "unit": "/mm3", "reference_range": { "default": "200-1000" }, "panel": "Differential Count" },
+    { "standard_name": "Absolute Eosinophil Count", "aliases": ["AEC", "Absolute Eosinophil Count (AEC)"], "loinc_code": "711-2", "unit": "/mm3", "reference_range": { "default": "20-500" }, "panel": "Differential Count" },
+    { "standard_name": "Absolute Basophil Count", "aliases": ["ABC", "Absolute Basophil Count (ABC)"], "loinc_code": "704-7", "unit": "/mm3", "reference_range": { "default": "0-100" }, "panel": "Differential Count" },
+    { "standard_name": "Neutrophil Lymphocyte Ratio", "aliases": ["NLR", "Neutrophil Lymphocyte Ratio (NLR)"], "loinc_code": null, "unit": "Ratio", "reference_range": { "default": "1-3" }, "panel": "Differential Count", "notes": "Calculated ratio; not independently LOINC-coded." },
+    { "standard_name": "Mentzer Index", "aliases": ["Mentzer Index"], "loinc_code": null, "unit": "Index Value", "reference_range": { "default": null, "note": "Beta Thalassemia trait: <14; Iron deficiency anaemia: >=14" }, "panel": "CBC", "notes": "Calculated index (MCV/RBC); qualitative threshold-based interpretation, not a numeric range." },
+    { "standard_name": "Sehgal Index", "aliases": ["Sehgal Index"], "loinc_code": null, "unit": "Index Value", "reference_range": { "default": null, "note": "Beta Thalassemia trait: <972; Iron deficiency anaemia: >=972" }, "panel": "CBC", "notes": "Calculated index; qualitative threshold-based interpretation, not a numeric range." },
+    { "standard_name": "Platelet Count", "aliases": ["Platelet Count", "PLT"], "loinc_code": "777-3", "unit": "10^3/uL", "reference_range": { "default": "150-450" }, "panel": "CBC", "critical": { "low": 20, "high": 1000 } },
+    { "standard_name": "Plateletcrit", "aliases": ["Platelet Hematocrit", "Plateletcrit", "PCT"], "loinc_code": null, "unit": "%", "reference_range": { "default": "0.2-0.5" }, "panel": "CBC", "notes": "Calculated value; not independently LOINC-coded in common panels." },
+    { "standard_name": "Mean Platelet Volume", "aliases": ["MPV", "Mean Platelet Volume (MPV)"], "loinc_code": "32623-1", "unit": "fL", "reference_range": { "default": "7-13" }, "panel": "CBC" },
+    { "standard_name": "Erythrocyte Sedimentation Rate", "aliases": ["ESR", "Erythrocyte Sedimentation Rate (ESR)", "Sed Rate"], "loinc_code": "30341-2", "unit": "mm/hr", "reference_range": { "male": "0-15", "female": "0-20", "default": "0-15" }, "panel": "Inflammation" },
+
+    { "standard_name": "Total Cholesterol", "aliases": ["Cholesterol Total", "Total Cholesterol", "Cholesterol, Total", "Serum Cholesterol"], "loinc_code": "2093-3", "unit": "mg/dL", "reference_range": { "default": "<200" }, "panel": "Lipid Profile" },
+    { "standard_name": "Triglycerides", "aliases": ["Triglycerides", "TG", "Serum Triglycerides"], "loinc_code": "2571-8", "unit": "mg/dL", "reference_range": { "default": "<150" }, "panel": "Lipid Profile" },
+    { "standard_name": "HDL Cholesterol", "aliases": ["HDL", "HDL Cholesterol", "Cholesterol HDL", "HDL-C"], "loinc_code": "2085-9", "unit": "mg/dL", "reference_range": { "male": ">40", "female": ">50", "default": ">40" }, "panel": "Lipid Profile" },
+    { "standard_name": "LDL Cholesterol", "aliases": ["LDL", "LDL Cholesterol", "Cholesterol LDL", "LDL-C", "LDL Cholesterol (Calculated)"], "loinc_code": "13457-7", "unit": "mg/dL", "reference_range": { "default": "<100" }, "panel": "Lipid Profile" },
+    { "standard_name": "VLDL Cholesterol", "aliases": ["VLDL", "VLDL Cholesterol", "Cholesterol VLDL"], "loinc_code": "13458-5", "unit": "mg/dL", "reference_range": { "default": "5-40" }, "panel": "Lipid Profile" },
+
+    { "standard_name": "Alanine Aminotransferase", "aliases": ["ALT", "SGPT", "ALT (SGPT)", "SGPT (ALT)", "Alanine Aminotransferase (ALT)", "Alanine Transaminase"], "loinc_code": "1742-6", "unit": "U/L", "reference_range": { "male": "<40", "female": "<32", "default": "<40" }, "panel": "LFT" },
+    { "standard_name": "Aspartate Aminotransferase", "aliases": ["AST", "SGOT", "AST (SGOT)", "SGOT (AST)", "Aspartate Aminotransferase (AST)", "Aspartate Transaminase"], "loinc_code": "1920-8", "unit": "U/L", "reference_range": { "male": "5-40", "female": "9-32", "default": "5-40" }, "panel": "LFT" },
+    { "standard_name": "Alkaline Phosphatase", "aliases": ["ALP", "Alkaline Phosphatase (ALP)"], "loinc_code": "6768-6", "unit": "U/L", "reference_range": { "default": "53-128" }, "panel": "LFT" },
+    { "standard_name": "Total Bilirubin", "aliases": ["Bilirubin Total", "Total Bilirubin", "Bilirubin (Total)", "T. Bilirubin"], "loinc_code": "1975-2", "unit": "mg/dL", "reference_range": { "default": "0.3-1.2" }, "panel": "LFT" },
+    { "standard_name": "Direct Bilirubin", "aliases": ["Bilirubin Direct", "Direct Bilirubin", "Conjugated Bilirubin", "D. Bilirubin"], "loinc_code": "1968-7", "unit": "mg/dL", "reference_range": { "default": "0.0-0.3" }, "panel": "LFT" },
+    { "standard_name": "Total Protein", "aliases": ["Total Protein", "Protein Total", "Serum Total Protein"], "loinc_code": "2885-2", "unit": "g/dL", "reference_range": { "default": "6.4-8.3" }, "panel": "LFT" },
+    { "standard_name": "Albumin", "aliases": ["Albumin", "Serum Albumin"], "loinc_code": "1751-7", "unit": "g/dL", "reference_range": { "default": "3.5-5.2" }, "panel": "LFT" },
+    { "standard_name": "Globulin", "aliases": ["Globulin", "Serum Globulin"], "loinc_code": null, "unit": "g/dL", "reference_range": { "default": "2.3-3.5" }, "panel": "LFT", "notes": "Usually calculated as Total Protein minus Albumin; not independently LOINC-coded." },
+
+    { "standard_name": "Creatinine", "aliases": ["Creatinine", "Serum Creatinine", "S. Creatinine"], "loinc_code": "2160-0", "unit": "mg/dL", "reference_range": { "male": "0.7-1.3", "female": "0.6-1.1", "default": "0.6-1.3" }, "panel": "KFT" },
+    { "standard_name": "Blood Urea Nitrogen", "aliases": ["BUN", "Urea", "Blood Urea", "Blood Urea Nitrogen (BUN)"], "loinc_code": "3094-0", "unit": "mg/dL", "reference_range": { "default": "7-20" }, "panel": "KFT" },
+    { "standard_name": "Estimated Glomerular Filtration Rate", "aliases": ["eGFR", "GFR", "Estimated GFR"], "loinc_code": "62238-1", "unit": "mL/min", "reference_range": { "default": ">90" }, "panel": "KFT" },
+    { "standard_name": "Uric Acid", "aliases": ["Uric Acid", "Serum Uric Acid"], "loinc_code": "3084-1", "unit": "mg/dL", "reference_range": { "male": "3.4-7.0", "female": "2.4-6.0", "default": "2.4-7.0" }, "panel": "KFT" },
+    { "standard_name": "Sodium", "aliases": ["Sodium", "Na", "Serum Sodium", "Na+"], "loinc_code": "2951-2", "unit": "mEq/L", "reference_range": { "default": "135-145" }, "panel": "Electrolytes", "critical": { "low": 120, "high": 160 } },
+    { "standard_name": "Potassium", "aliases": ["Potassium", "K", "Serum Potassium", "K+"], "loinc_code": "2823-3", "unit": "mEq/L", "reference_range": { "default": "3.5-5.1" }, "panel": "Electrolytes", "critical": { "low": 2.5, "high": 6.0 } },
+    { "standard_name": "Chloride", "aliases": ["Chloride", "Cl", "Serum Chloride", "Cl-"], "loinc_code": "2075-0", "unit": "mEq/L", "reference_range": { "default": "98-107" }, "panel": "Electrolytes" },
+
+    { "standard_name": "Thyroid Stimulating Hormone", "aliases": ["TSH", "Thyroid Stimulating Hormone (TSH)", "Thyrotropin"], "loinc_code": "3016-3", "unit": "uIU/mL", "reference_range": { "default": "0.4-4.0" }, "panel": "Thyroid" },
+    { "standard_name": "Free T4", "aliases": ["FT4", "Free T4", "Free Thyroxine", "T4 Free"], "loinc_code": "3024-7", "unit": "ng/dL", "reference_range": { "default": "0.8-1.8" }, "panel": "Thyroid" },
+    { "standard_name": "Free T3", "aliases": ["FT3", "Free T3", "Free Triiodothyronine", "T3 Free"], "loinc_code": "3053-6", "unit": "pg/mL", "reference_range": { "default": "2.3-4.2" }, "panel": "Thyroid" },
+
+    { "standard_name": "Fasting Blood Glucose", "aliases": ["FBS", "Fasting Blood Sugar", "Glucose Fasting", "Fasting Glucose", "Blood Sugar Fasting"], "loinc_code": "1558-6", "unit": "mg/dL", "reference_range": { "default": "70-100" }, "panel": "Diabetes", "critical": { "low": 40, "high": 500 } },
+    { "standard_name": "HbA1c", "aliases": ["HbA1c", "Glycated Hemoglobin", "Hemoglobin A1c", "A1c"], "loinc_code": "4548-4", "unit": "%", "reference_range": { "default": "<5.7" }, "panel": "Diabetes" },
+
+    { "standard_name": "Vitamin D (25-OH)", "aliases": ["Vitamin D", "25-OH Vitamin D", "Vitamin D3", "25-Hydroxyvitamin D", "Vitamin D (25-OH)"], "loinc_code": "1989-3", "unit": "ng/mL", "reference_range": { "default": "30-100" }, "panel": "Vitamins" },
+    { "standard_name": "Vitamin B12", "aliases": ["Vitamin B12", "B12", "Cobalamin"], "loinc_code": "2132-9", "unit": "pg/mL", "reference_range": { "default": "200-900" }, "panel": "Vitamins" },
+    { "standard_name": "Serum Iron", "aliases": ["Iron", "Serum Iron", "Fe"], "loinc_code": "2498-4", "unit": "ug/dL", "reference_range": { "male": "65-175", "female": "50-170", "default": "60-170" }, "panel": "Iron Studies" },
+    { "standard_name": "Ferritin", "aliases": ["Ferritin", "Serum Ferritin"], "loinc_code": "2276-4", "unit": "ng/mL", "reference_range": { "male": "24-336", "female": "11-307", "default": "20-250" }, "panel": "Iron Studies" },
+
+    { "standard_name": "Urine Protein", "aliases": ["Urine Protein", "Protein (Urine)", "Albumin (Urine)"], "loinc_code": "5804-0", "unit": "qualitative", "reference_range": { "default": "Nil" }, "panel": "Urine" },
+    { "standard_name": "Urine Glucose", "aliases": ["Urine Glucose", "Glucose (Urine)", "Sugar (Urine)"], "loinc_code": "5792-7", "unit": "qualitative", "reference_range": { "default": "Nil" }, "panel": "Urine" },
+    { "standard_name": "Urine pH", "aliases": ["Urine pH", "pH (Urine)"], "loinc_code": "5803-2", "unit": "pH", "reference_range": { "default": "4.5-8.0" }, "panel": "Urine" },
+    { "standard_name": "Urine Specific Gravity", "aliases": ["Specific Gravity", "Urine Specific Gravity", "Sp. Gravity"], "loinc_code": "5811-5", "unit": "", "reference_range": { "default": "1.003-1.030" }, "panel": "Urine" },
+    { "standard_name": "Urine Pus Cells", "aliases": ["Pus Cells", "Urine Pus Cells", "WBC (Urine)", "Leukocytes (Urine)"], "loinc_code": "20408-1", "unit": "/hpf", "reference_range": { "default": "0-5" }, "panel": "Urine" },
+    { "standard_name": "Urine RBC", "aliases": ["Urine RBC", "RBC (Urine)", "Red Blood Cells (Urine)"], "loinc_code": "13945-1", "unit": "/hpf", "reference_range": { "default": "0-2" }, "panel": "Urine" }
+  ]
 }

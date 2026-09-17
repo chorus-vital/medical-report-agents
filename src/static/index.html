@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Medical Report Analyzer — Agent 1 Tester</title>
+  <title>Medical Report Analyzer — Agent 1 + 2 Tester</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -708,6 +708,130 @@
       font-size: 0.76rem;
     }
 
+    .td-loinc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      color: #a5b4fc;
+      background: rgba(165, 180, 252, 0.1);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .td-loinc.none {
+      color: var(--text-dim);
+      background: transparent;
+      font-style: italic;
+    }
+
+    /* ── Flag badges ── */
+    .flag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      letter-spacing: 0.03em;
+    }
+
+    .flag-badge.flag-GREEN {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .flag-badge.flag-AMBER {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .flag-badge.flag-RED {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .flag-badge.flag-UNKNOWN {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-dim);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .flag-badge.flag-REVIEW {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    /* A row whose match needs human review gets a subtle left accent so it
+       stands out while scanning the table, not just in the flag column. */
+    tr.row-needs-review td:first-child {
+      border-left: 3px solid #38bdf8;
+    }
+
+    /* ── Section divider between the two result tables ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.75rem 0 1rem;
+    }
+
+    .section-divider .line {
+      flex: 1;
+      height: 1px;
+      background: var(--card-border);
+    }
+
+    .section-divider .label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .ground-summary {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .ground-stat {
+      flex: 1;
+      min-width: 110px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.85rem;
+    }
+
+    .ground-stat .num {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .ground-stat .label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 0.15rem;
+    }
+
+    .ground-stat.stat-green .num { color: #34d399; }
+    .ground-stat.stat-amber .num { color: #fbbf24; }
+    .ground-stat.stat-red .num { color: #f87171; }
+    .ground-stat.stat-unknown .num { color: var(--text-dim); }
+    .ground-stat.stat-matched .num { color: var(--primary); }
+    .ground-stat.stat-review .num { color: #38bdf8; }
+
     /* ── JSON Accordion ── */
     details.json-accordion {
       background: #0b1120;
@@ -789,7 +913,7 @@
         <div class="brand-icon">🔬</div>
         <div>
           <div class="brand-title">Medical Report Analyzer</div>
-          <div class="brand-subtitle">Agent 1 · Ingestion & Extraction Tester</div>
+          <div class="brand-subtitle">Agent 1 + Agent 2 · Extraction & Grounding Tester</div>
         </div>
       </div>
       <div class="header-actions">
@@ -807,13 +931,13 @@
   <main>
     <div class="intro-banner">
       <div class="intro-text">
-        <h1>Agent 1 Interactive Verification</h1>
-        <p>Test document parsing (PDF, DOCX, Images, Text) and structured lab extraction powered by Gemini / Regex fallback.</p>
+        <h1>Agent 1 + Agent 2 Interactive Verification</h1>
+        <p>Test document parsing & extraction (Agent 1), then LOINC grounding and GREEN/AMBER/RED flagging (Agent 2).</p>
       </div>
       <div class="flow-steps">
         <span class="flow-step active">1. Ingestion & Extract</span>
         <span class="flow-arrow">➔</span>
-        <span class="flow-step pending">2. Ground & Flag</span>
+        <span class="flow-step active">2. Ground & Flag</span>
         <span class="flow-arrow">➔</span>
         <span class="flow-step pending">3. Reason & Verify</span>
       </div>
@@ -856,7 +980,7 @@
 
           <button class="btn-submit" id="btnSubmitFile" onclick="submitFileAnalysis()">
             <span class="spinner" id="fileSpinner"></span>
-            <span id="btnSubmitText">🚀 Run Agent 1 Extraction</span>
+            <span id="btnSubmitText">🚀 Run Full Pipeline</span>
           </button>
 
           <!-- Quick Samples -->
@@ -886,23 +1010,23 @@
           <textarea class="paste-area" id="pasteArea" placeholder="Paste your lab report text here... (e.g. Hemoglobin 14.5 g/dL 12.0 - 16.0)"></textarea>
           <button class="btn-submit" id="btnSubmitTextTab" onclick="submitTextAnalysis()">
             <span class="spinner" id="textSpinner"></span>
-            <span>🚀 Run Agent 1 on Text</span>
+            <span>🚀 Run Full Pipeline on Text</span>
           </button>
         </div>
       </section>
 
-      <!-- ── Right Column: Extraction Results ── -->
+      <!-- ── Right Column: Results ── -->
       <section class="card">
         <div class="card-title">
-          <span>📊 Extraction Output</span>
+          <span>📊 Pipeline Output</span>
         </div>
 
         <!-- Empty state placeholder -->
         <div class="results-empty" id="resultsEmpty">
           <div class="results-empty-icon">🧪</div>
-          <h3>No Extraction Results Yet</h3>
+          <h3>No Results Yet</h3>
           <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.35rem;">
-            Upload a file or choose a sample report on the left to test Agent 1.
+            Upload a file or choose a sample report on the left to run the pipeline.
           </p>
         </div>
 
@@ -921,7 +1045,7 @@
             </div>
           </div>
 
-          <!-- Results Summary Bar & Filter -->
+          <!-- ── Agent 1 section: raw extraction ── -->
           <div class="results-bar">
             <div class="results-count-badge" id="itemsCountBadge">
               <span style="font-size: 1rem;">✅</span>
@@ -933,7 +1057,6 @@
             </div>
           </div>
 
-          <!-- Table -->
           <div class="table-wrapper">
             <table>
               <thead>
@@ -947,6 +1070,36 @@
                 </tr>
               </thead>
               <tbody id="resultsTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Agent 2 section: LOINC grounding + flags ── -->
+          <div class="section-divider">
+            <span class="line"></span>
+            <span class="label">🔵 Agent 2 · Terminology Grounding & Flagging</span>
+            <span class="line"></span>
+          </div>
+
+          <div class="ground-summary" id="groundSummary">
+            <!-- Rendered via JS -->
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th class="td-num">#</th>
+                  <th>Test Name</th>
+                  <th>LOINC Code</th>
+                  <th>Observed Value</th>
+                  <th>Reference Range</th>
+                  <th>Flag</th>
+                  <th>Explanation</th>
+                </tr>
+              </thead>
+              <tbody id="labResultsTableBody">
                 <!-- Rendered via JS -->
               </tbody>
             </table>
@@ -1194,8 +1347,11 @@
       document.getElementById('itemsCountText').textContent =
         `${count} Lab Test${count === 1 ? '' : 's'} Extracted (${duration}s)`;
 
-      // Render table
+      // Render Agent 1 table
       renderTableRows(data.extracted_items || []);
+
+      // Render Agent 2 table (LOINC grounding + flags)
+      renderLabResultsTable(data.lab_results || []);
 
       // Raw JSON
       document.getElementById('jsonViewer').textContent = JSON.stringify(data, null, 2);
@@ -1261,6 +1417,92 @@
       `).join('');
     }
 
+    // Agent 2 output: LOINC codes + GREEN/AMBER/RED/UNKNOWN flags
+    function renderLabResultsTable(labResults) {
+      const tbody = document.getElementById('labResultsTableBody');
+      const summary = document.getElementById('groundSummary');
+
+      if (!labResults || labResults.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No grounded results — Agent 2 may not have run on this response.</td></tr>`;
+        summary.innerHTML = '';
+        return;
+      }
+
+      // A row "needs review" when it wasn't auto-coded but scored close
+      // enough to a candidate to be worth a human glance -- the backend
+      // signals this by prefixing the explanation with "🔎 Needs review:"
+      // rather than adding a new flag value, since the schema's flag field
+      // is fixed to GREEN/AMBER/RED/UNKNOWN.
+      const needsReview = (r) => !r.loinc_code && (r.explanation || '').includes('Needs review');
+
+      const counts = { GREEN: 0, AMBER: 0, RED: 0, UNKNOWN: 0 };
+      let matched = 0;
+      let reviewCount = 0;
+      labResults.forEach(r => {
+        const f = (r.flag || 'UNKNOWN').toUpperCase();
+        if (counts[f] !== undefined) counts[f]++;
+        if (r.loinc_code) matched++;
+        if (needsReview(r)) reviewCount++;
+      });
+
+      summary.innerHTML = `
+        <div class="ground-stat stat-matched">
+          <div class="num">${matched}/${labResults.length}</div>
+          <div class="label">LOINC Matched</div>
+        </div>
+        <div class="ground-stat stat-review">
+          <div class="num">${reviewCount}</div>
+          <div class="label">Needs Review</div>
+        </div>
+        <div class="ground-stat stat-green">
+          <div class="num">${counts.GREEN}</div>
+          <div class="label">Green</div>
+        </div>
+        <div class="ground-stat stat-amber">
+          <div class="num">${counts.AMBER}</div>
+          <div class="label">Amber</div>
+        </div>
+        <div class="ground-stat stat-red">
+          <div class="num">${counts.RED}</div>
+          <div class="label">Red</div>
+        </div>
+        <div class="ground-stat stat-unknown">
+          <div class="num">${counts.UNKNOWN}</div>
+          <div class="label">Unknown</div>
+        </div>
+      `;
+
+      tbody.innerHTML = labResults.map((r, idx) => {
+        const flag = (r.flag || 'UNKNOWN').toUpperCase();
+        const review = needsReview(r);
+        const flagIcon = { GREEN: '🟢', AMBER: '🟡', RED: '🔴', UNKNOWN: '⚪' }[flag] || '⚪';
+
+        let loincHtml, flagHtml;
+        if (r.loinc_code) {
+          loincHtml = `<span class="td-loinc">${escapeHtml(r.loinc_code)}</span>`;
+          flagHtml = `<span class="flag-badge flag-${flag}">${flagIcon} ${flag}</span>`;
+        } else if (review) {
+          loincHtml = `<span class="td-loinc none">unmatched</span>`;
+          flagHtml = `<span class="flag-badge flag-REVIEW">🔎 REVIEW</span>`;
+        } else {
+          loincHtml = `<span class="td-loinc none">unmatched</span>`;
+          flagHtml = `<span class="flag-badge flag-${flag}">${flagIcon} ${flag}</span>`;
+        }
+
+        return `
+          <tr class="${review ? 'row-needs-review' : ''}">
+            <td class="td-num">${idx + 1}</td>
+            <td class="td-name" title="${escapeHtml(r.standard_name || '')}">${escapeHtml(r.test_name || '—')}</td>
+            <td>${loincHtml}</td>
+            <td><span class="td-val">${escapeHtml(r.observed_value != null ? String(r.observed_value) : '—')}</span></td>
+            <td class="td-range">${escapeHtml(r.reference_range || '—')}</td>
+            <td>${flagHtml}</td>
+            <td class="td-unit" style="font-size:0.75rem;">${escapeHtml(r.explanation || '—')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     function filterResultsTable() {
       if (!currentResults || !currentResults.extracted_items) return;
       const q = document.getElementById('tableFilterInput').value.toLowerCase();
@@ -1272,6 +1514,18 @@
         return haystack.includes(q);
       });
       renderTableRows(filtered);
+
+      // Keep the Agent 2 table in sync with the same filter
+      if (currentResults.lab_results) {
+        const filteredLab = currentResults.lab_results.filter(item => {
+          const haystack = [
+            item.test_name, item.standard_name, item.loinc_code,
+            item.observed_value, item.reference_range, item.flag, item.explanation,
+          ].map(v => String(v || '').toLowerCase()).join(' ');
+          return haystack.includes(q);
+        });
+        renderLabResultsTable(filteredLab);
+      }
     }
 
     function copyJsonToClipboard(e) {

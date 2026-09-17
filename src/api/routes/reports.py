@@ -40,6 +40,7 @@ def _build_response(
     """
     extracted = result.get("extracted_items", [])
     degraded = bool(result.get("extraction_degraded"))
+    lab_results = result.get("lab_results", [])
 
     if extracted and degraded:
         status = "degraded"
@@ -55,6 +56,7 @@ def _build_response(
         "status": status,
         "patient_info": result.get("patient_info"),
         "extracted_items": extracted,
+        "lab_results": [r.model_dump() for r in lab_results],
         "items_count": len(extracted),
         "report_notes": result.get("report_notes", []),
         "extraction": {
