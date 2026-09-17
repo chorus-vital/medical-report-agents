@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from src.schemas.state import PipelineState
 from src.services.extractor import extract_from_file_detailed
+from src.services.terminology import ground_lab_items
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +104,51 @@ async def extract_node(state: PipelineState) -> Dict[str, Any]:
 # Node 2 — Terminology & Flagging  (placeholder)
 # ═══════════════════════════════════════════════════════════════════════════
 
+# ─────────────────────────────────────────────────────────────
+# Node 2 — Terminology & Flagging
+# ─────────────────────────────────────────────────────────────
+
 async def ground_node(state: PipelineState) -> Dict[str, Any]:
-    """Placeholder — will be implemented as Agent 2."""
-    logger.info("🏷️  [ground] Placeholder — passing through")
-    return {"current_step": "grounding_complete"}
+    """
+    **Agent 2 · Terminology Grounding & Flagging**
+
+    Matches each extracted lab item to a LOINC code + reference range from
+    the local ontology, and flags it GREEN/AMBER/RED/UNKNOWN.
+
+    State consumed
+    ---------------
+    ``extracted_items``, ``patient_info``
+
+    State produced
+    ---------------
+    ``lab_results``, ``current_step``
+    """
+    extracted_items = state.get("extracted_items", [])
+    patient_info = state.get("patient_info")
+
+    logger.info("🔵 [ground] Starting — %d item(s) to ground", len(extracted_items))
+
+    try:
+        lab_results = ground_lab_items(extracted_items, patient_info=patient_info)
+    except Exception as exc:
+        logger.error("❌ [ground] Failed: %s", exc, exc_info=True)
+        return {
+            "lab_results": [],
+            "current_step": "grounding_failed",
+            "errors": [f"Grounding error: {exc}"],
+        }
+
+    matched = sum(1 for r in lab_results if r.loinc_code)
+    logger.info(
+        "✅ [ground] Done — %d/%d items matched to LOINC codes",
+        matched,
+        len(lab_results),
+    )
+
+    return {
+        "lab_results": lab_results,
+        "current_step": "grounding_complete",
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════
