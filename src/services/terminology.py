@@ -39,7 +39,16 @@ logger = logging.getLogger(__name__)
 
 # Below this rapidfuzz score (0-100), a row is left uncoded rather than
 # risking a wrong LOINC code on a confident-looking but wrong match.
-FUZZY_MATCH_THRESHOLD = 80.0
+FUZZY_MATCH_THRESHOLD = 90.0
+
+# Aliases and printed terms shorter than this are abbreviations ("k", "na",
+# "ast", "alt") — a one-letter slip turns one analyte into another, so they
+# are only ever matched exactly, never fuzzily.
+MIN_FUZZY_TERM_LEN = 4
+
+# The best fuzzy candidate must beat the best candidate for a *different*
+# analyte by at least this many points; a near-tie is ambiguous, so uncoded.
+FUZZY_MATCH_MARGIN = 5.0
 
 # How far outside a boundary still counts as "borderline" (AMBER) rather
 # than "alert" (RED) — expressed as a fraction of the interval's width
@@ -149,25 +158,37 @@ def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
     Fuzzy-match a raw extracted test name against the local ontology.
 
     Returns ``None`` — leaving the row uncoded — when no alias clears
-    :data:`FUZZY_MATCH_THRESHOLD`.
+    :data:`FUZZY_MATCH_THRESHOLD`, or when the best alias does not beat every
+    other analyte by :data:`FUZZY_MATCH_MARGIN`.
+
+    Scoring uses ``fuzz.token_sort_ratio``, which compares whole strings.
+    ``fuzz.WRatio`` is deliberately avoided: its partial-ratio component
+    scores a short alias ~90 against any longer name that merely contains
+    it ("k" in "Alk Phos" -> Potassium), producing confident wrong codes.
     """
     alias_index = _alias_index()
     if not alias_index:
         return None
 
-    choices = list(alias_index.keys())
+    choices = [a for a in alias_index if len(a) >= MIN_FUZZY_TERM_LEN]
     best_score = -1.0
     best_key: Optional[str] = None
+    runner_up = -1.0
 
     for term in _candidate_terms(test_name):
         if term in alias_index:  # exact alias hit — skip fuzzy scoring entirely
-            best_key, best_score = alias_index[term], 100.0
+            best_key, best_score, runner_up = alias_index[term], 100.0, -1.0
             break
-        result = process.extractOne(term, choices, scorer=fuzz.WRatio)
-        if result is not None:
-            match_str, score, _ = result
+        if len(term) < MIN_FUZZY_TERM_LEN:
+            continue
+        for match_str, score, _ in process.extract(term, choices, scorer=fuzz.token_sort_ratio, limit=None):
+            key = alias_index[match_str]
             if score > best_score:
-                best_score, best_key = score, alias_index[match_str]
+                if key != best_key:
+                    runner_up = best_score
+                best_score, best_key = score, key
+            elif key != best_key and score > runner_up:
+                runner_up = score
 
     if best_key is None or best_score < FUZZY_MATCH_THRESHOLD:
         if best_key is not None:
@@ -175,6 +196,13 @@ def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
                 "Ontology match for %r rejected below threshold (%.1f < %.1f)",
                 test_name, best_score, FUZZY_MATCH_THRESHOLD,
             )
+        return None
+
+    if best_score - runner_up < FUZZY_MATCH_MARGIN:
+        logger.debug(
+            "Ontology match for %r rejected as ambiguous (%.1f vs runner-up %.1f)",
+            test_name, best_score, runner_up,
+        )
         return None
 
     entry = _load_ontology()[best_key]

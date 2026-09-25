@@ -68,6 +68,74 @@ def test_nlr_is_not_confused_with_neutrophils_pct():
     assert match["loinc_code"] is None  # no single standardised LOINC for this ratio
 
 
+# Regression (PR #5 review): fuzz.WRatio's partial-ratio component scored a
+# short alias ~85-90 against any longer name containing it, so these were
+# coded as unrelated analytes (e.g. "Calcium, Serum" -> Absolute Lymphocyte
+# Count via the alias "alc"). None of these names is a registered alias, so
+# each one exercises the fuzzy path — and none has an ontology entry, so the
+# only correct answer is "uncoded".
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Serum Calcium",
+        "Calcium, Serum",
+        "Ionised Calcium",
+        "Random Blood Sugar",
+        "Blood Sugar Random",
+        "T3, Total",
+        "Total T3",
+        "T4, Total",
+    ],
+)
+def test_name_containing_short_alias_is_not_miscoded(name):
+    assert not set(term._candidate_terms(name)) & term._alias_index().keys()  # fuzzy path, not exact
+    assert term.match_to_loinc(name) is None
+
+
+@pytest.mark.parametrize(
+    "name,expected_key",
+    [
+        ("Alk Phos", "alkaline_phosphatase"),        # was coded as Potassium
+        ("Fasting Blood Sugar", "fasting_glucose"),  # was coded as SGOT (AST)
+        ("RBC Distribution Width CV", "rdw"),        # was coded as Total RBC Count
+    ],
+)
+def test_review_examples_are_coded_to_the_right_analyte(name, expected_key):
+    match = term.match_to_loinc(name)
+    assert match is not None
+    assert match["ontology_key"] == expected_key
+
+
+def test_alk_phos_row_is_not_rendered_as_critical_potassium():
+    row = term.process_item({"test_name": "Alk Phos", "observed_value": "120", "unit": "U/L"})
+    assert row["standard_name"] == "Alkaline Phosphatase"
+    assert row["loinc_code"] == "6768-6"
+    assert row["flag"] == "GREEN"
+
+
+@pytest.mark.parametrize(
+    "name,expected_key",
+    [
+        ("Serum Potasium", "potassium"),  # typo, not a registered alias
+        ("Total Cholestrol", "total_cholesterol"),
+        ("Platelets Count", "platelet_count"),
+        ("Creatinine, Serum", "serum_creatinine"),
+        ("Absolute Neutrophils Count", "anc"),
+    ],
+)
+def test_fuzzy_path_still_codes_genuine_near_misses(name, expected_key):
+    assert not set(term._candidate_terms(name)) & term._alias_index().keys()  # fuzzy path, not exact
+    match = term.match_to_loinc(name)
+    assert match is not None
+    assert match["ontology_key"] == expected_key
+    assert match["match_confidence"] >= term.FUZZY_MATCH_THRESHOLD
+
+
+def test_short_abbreviation_is_never_fuzzy_matched():
+    # "aat" is one letter from both "ast" and "alt" — must not be guessed.
+    assert term.match_to_loinc("AAT") is None
+
+
 # ────────────────────────── Reference range parsing ──────────────────────────
 
 
