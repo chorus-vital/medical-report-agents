@@ -50,6 +50,16 @@ MIN_FUZZY_TERM_LEN = 4
 # analyte by at least this many points; a near-tie is ambiguous, so uncoded.
 FUZZY_MATCH_MARGIN = 5.0
 
+# Clinical qualifiers that flip or partition an analyte's meaning. Whole-string
+# scorers barely register a negating prefix — "indirect bilirubin" scores 94
+# against "direct bilirubin" — so a differing qualifier disqualifies a fuzzy
+# candidate outright, no matter how close the rest of the string is.
+QUALIFIER_TOKENS = frozenset({
+    "direct", "indirect", "conjugated", "unconjugated",
+    "free", "bound", "unbound", "total", "non",
+    "fasting", "random", "postprandial", "ionised", "ionized",
+})
+
 # How far outside a boundary still counts as "borderline" (AMBER) rather
 # than "alert" (RED) — expressed as a fraction of the interval's width
 # (or, for a one-sided bound, of the bound's own magnitude).
@@ -153,6 +163,14 @@ def _candidate_terms(raw_name: str) -> List[str]:
     return terms
 
 
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _qualifier_tokens(text: str) -> set:
+    """The :data:`QUALIFIER_TOKENS` present in a name, as a set."""
+    return {w for w in _WORD.findall((text or "").lower()) if w in QUALIFIER_TOKENS}
+
+
 def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
     """
     Fuzzy-match a raw extracted test name against the local ontology.
@@ -181,7 +199,10 @@ def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
             break
         if len(term) < MIN_FUZZY_TERM_LEN:
             continue
+        term_qualifiers = _qualifier_tokens(term)
         for match_str, score, _ in process.extract(term, choices, scorer=fuzz.token_sort_ratio, limit=None):
+            if _qualifier_tokens(match_str) != term_qualifiers:
+                continue  # different clinical fraction/state — not a near-miss
             key = alias_index[match_str]
             if score > best_score:
                 if key != best_key:

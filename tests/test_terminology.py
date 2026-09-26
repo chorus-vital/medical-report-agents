@@ -299,3 +299,92 @@ def test_annotate_items_handles_missing_patient_info():
     items = [{"test_name": "Hemoglobin", "observed_value": "14"}]
     rows = term.annotate_items(items, None)
     assert rows[0]["flag"] == "GREEN"
+
+
+# ──────────────── Qualifier-conflict guard (direct vs indirect) ───────────────
+#
+# Regression (post-merge review of PR #5): the fuzzy matcher scored
+# "indirect bilirubin" against the alias "direct bilirubin" at 94.1 —
+# clearing FUZZY_MATCH_THRESHOLD, with the runner-up analyte 27 points back
+# so FUZZY_MATCH_MARGIN did not reject it either. A negating prefix barely
+# moves a whole-string scorer, so a normal indirect bilirubin was coded as
+# LOINC 1968-7 (Direct Bilirubin) and flagged RED against the 0-0.3 direct
+# interval. Threshold/margin/MIN_FUZZY_TERM_LEN guard short-alias substring
+# collisions only; they cannot see a clinical qualifier.
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("indirect bilirubin", {"indirect"}),
+        ("unconjugated bilirubin", {"unconjugated"}),
+        ("direct bilirubin", {"direct"}),
+        ("non-hdl cholesterol", {"non"}),
+        ("total cholesterol", {"total"}),
+        ("serum potasium", set()),
+        ("hemglobin", set()),
+    ],
+)
+def test_qualifier_tokens_extracts_clinical_qualifiers(text, expected):
+    assert term._qualifier_tokens(text) == expected
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Indirect Bilirubin",
+        "Bilirubin Indirect",
+        "Unconjugated Bilirubin",
+        "Indirect Bilirubin (Unconjugated)",
+    ],
+)
+def test_indirect_bilirubin_is_never_coded_as_direct_bilirubin(name):
+    match = term.match_to_loinc(name)
+    assert match is not None, f"{name!r} should resolve to the indirect analyte"
+    assert match["ontology_key"] == "indirect_bilirubin"
+    assert match["loinc_code"] == "1971-1"
+
+
+def test_indirect_bilirubin_value_is_flagged_against_its_own_range():
+    # 0.7 mg/dL is a normal indirect bilirubin; against the *direct* interval
+    # (0 - 0.3) it was reported RED.
+    row = term.process_item(
+        {"test_name": "Indirect Bilirubin", "observed_value": "0.7", "unit": "mg/dL"}
+    )
+    assert row["standard_name"] == "Indirect Bilirubin"
+    assert row["loinc_code"] == "1971-1"
+    assert row["flag"] == "GREEN"
+
+
+def test_qualifier_conflict_leaves_row_uncoded_when_no_entry_exists():
+    # "Non-HDL Cholesterol" has no ontology entry. It must stay uncoded rather
+    # than collapse onto "hdl cholesterol", whose meaning it negates.
+    assert term.match_to_loinc("Non-HDL Cholesterol") is None
+    assert term.match_to_loinc("Non HDL Cholesterol") is None
+
+
+def test_qualifier_guard_does_not_block_matching_qualifiers():
+    # Both sides carry the same qualifier, so the guard must stay out of the way.
+    match = term.match_to_loinc("Total Cholestrol")
+    assert match is not None
+    assert match["ontology_key"] == "total_cholesterol"
+
+
+# Regression: the headline abnormal row on a real Orange Health CBC report
+# ("Total White Blood Cell Count (TC)", 2130 against 4000-10000 — leukopenia)
+# was left uncoded because the ontology carried "total leukocyte count" and
+# "total wbc count" but neither the "white blood cell" long form nor "tc".
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Total White Blood Cell Count (TC)",
+        "Total White Blood Cell Count",
+        "Total WBC",
+        "TC",
+    ],
+)
+def test_total_white_blood_cell_count_is_coded(name):
+    match = term.match_to_loinc(name)
+    assert match is not None, f"{name!r} should resolve to the WBC analyte"
+    assert match["ontology_key"] == "wbc_count"
+    assert match["loinc_code"] == "6690-2"

@@ -100,13 +100,17 @@
       "loinc_code": "6690-2",
       "standard_name": "Total WBC Count",
       "aliases": [
+        "tc",
         "tlc",
         "total leukocyte count",
+        "total wbc",
         "total wbc count",
+        "total white blood cell count",
         "wbc",
         "wbc count",
         "wbc_count",
-        "white blood cell count"
+        "white blood cell count",
+        "white blood cell count total"
       ],
       "panel": "Complete Blood Count (CBC)",
       "unit": "/mm3",
@@ -696,6 +700,27 @@
         }
       },
       "explanation": "The processed (conjugated) form of bilirubin."
+    },
+    {
+      "key": "indirect_bilirubin",
+      "loinc_code": "1971-1",
+      "standard_name": "Indirect Bilirubin",
+      "aliases": [
+        "bilirubin indirect",
+        "indirect bilirubin",
+        "indirect_bilirubin",
+        "unconjugated bilirubin"
+      ],
+      "panel": "Liver Function Test (LFT)",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference": {
+        "default": {
+          "low": 0.1,
+          "high": 1.0
+        }
+      },
+      "explanation": "The unprocessed (unconjugated) form of bilirubin, before the liver converts it."
     },
     {
       "key": "total_protein",
