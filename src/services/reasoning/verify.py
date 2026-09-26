@@ -28,7 +28,7 @@ _NORMALITY = re.compile(
     r"(?:with)?in (?:the )?(?:normal |reference |expected )?(?:range|interval|limits))\b",
     re.I)
 
-# Verbs and vocabulary that turn an observation into a diagnosis.
+# Phrasings that attribute a condition to this patient. Always blocked.
 _DIAGNOSIS_PATTERNS = tuple(re.compile(p, re.I) for p in (
     r"\byou (?:have|likely have|may have|might have)\b",
     r"\bthis (?:indicates|means|suggests|confirms|points to)\b",
@@ -36,9 +36,37 @@ _DIAGNOSIS_PATTERNS = tuple(re.compile(p, re.I) for p in (
     r"\bcaused by\b",
     r"\bdiagnos(?:is|ed|tic)\b",
     r"\byou (?:are|appear) (?:anaemic|anemic|diabetic)\b",
-    r"\b(?:anaemia|anemia|leukaemia|leukemia|leukopenia|neutropenia|thalassaemia|"
-    r"thalassemia|infection|deficiency|cancer|sepsis|disease|disorder|syndrome)\b",
+    r"\b(?:results?|values?|counts?|findings?) (?:indicate|suggest|show|point to)\b",
 ))
+
+# Condition nouns. These are context-dependent: naming what a cell DOES is a
+# definition ("white blood cells that fight infection"), while predicating the
+# same noun of the patient is a diagnosis ("a sign of infection"). Blocking the
+# bare noun dropped the two headline findings on a real report, because the
+# model had reworded our own ontology gloss.
+_CONDITION_NOUNS = re.compile(
+    r"\b(anaemia|anemia|leukaemia|leukemia|leukopenia|neutropenia|thalassaemia|"
+    r"thalassemia|infection|infections|deficiency|cancer|sepsis|disease|disorder|"
+    r"syndrome)\b", re.I)
+
+# Definitional use: the noun describes a cell's job, not the patient's state.
+_DEFINITIONAL = re.compile(
+    r"(?:fight|combat|defend|protect|guard|ward)\w*\s+(?:against\s+)?$"
+    r"|(?:involved in|response to|responses to|protection against|defence against|"
+    r"defense against)\s+$",
+    re.I)
+_COMPOUND = re.compile(r"^[-\s]?(?:fighting|fighter|related|linked)\b", re.I)
+
+# Predication: the noun is being attached to this patient's results.
+_PREDICATING = re.compile(
+    r"\b(?:sign|signs|evidence|suggestive|indicative|consistent with|due to|"
+    r"because of|likely|probably|possible|possibly|risk of|points to|you have|"
+    r"you may have|is an?|are an?|suffering from)\b[^.]{0,30}$", re.I)
+
+# U+2011 and friends: the model reformats our gloss and the exact-span
+# exemption stops matching, so dashes are folded before any of this runs.
+_DASHES = str.maketrans({"‐": "-", "‑": "-", "‒": "-",
+                         "–": "-", "—": "-", "−": "-"})
 
 # Numbers spelled as words, which the digit scan cannot see. Only decimals are
 # rejected: "one of your results" is ordinary prose, "nine point two" is a value.
@@ -98,6 +126,9 @@ def _strip_lab_notes(text: str, brief: ClinicalBrief) -> str:
     attribution, is the point. Replaying it unquoted as our own conclusion is
     not, so the span only earns its exemption inside quotation marks.
     """
+    for gloss in brief.allowed_glosses:
+        if len(gloss.strip()) >= _MIN_EXEMPT_NOTE:
+            text = text.replace(gloss, " ")
     for note in brief.lab_notes:
         if len(note.strip()) < _MIN_EXEMPT_NOTE:
             continue
@@ -144,12 +175,24 @@ def _check_analytes(text: str, field: str, brief: ClinicalBrief) -> List[Violati
 
 
 def _check_diagnosis(text: str, field: str, brief: ClinicalBrief) -> List[Violation]:
-    scannable = _strip_lab_notes(text, brief)
+    scannable = _strip_lab_notes(text, brief).translate(_DASHES)
+
     for pattern in _DIAGNOSIS_PATTERNS:
         match = pattern.search(scannable)
         if match:
             return [Violation("diagnosis", field, text,
                               f"diagnosis language: '{match.group(0)}'")]
+
+    for match in _CONDITION_NOUNS.finditer(scannable):
+        before = scannable[max(0, match.start() - 40):match.start()]
+        after = scannable[match.end():match.end() + 20]
+        if _DEFINITIONAL.search(before) or _COMPOUND.match(after):
+            continue  # describing what a cell does, not what the patient has
+        if _PREDICATING.search(before) or not before.strip():
+            return [Violation("diagnosis", field, text,
+                              f"condition named: '{match.group(0)}'")]
+        return [Violation("diagnosis", field, text,
+                          f"condition named: '{match.group(0)}'")]
     return []
 
 

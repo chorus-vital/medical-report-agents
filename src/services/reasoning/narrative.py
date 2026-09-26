@@ -32,10 +32,11 @@ class NarrativeDraft(BaseModel):
 
 def _describe(abnormality) -> str:
     unit = f" {abnormality.unit}" if abnormality.unit else ""
-    interval = (f" (reference interval {abnormality.range_text})"
+    interval = (f" (usual range {abnormality.range_text})"
                 if abnormality.range_text else "")
+    gloss = f" — {abnormality.plain_meaning}" if abnormality.plain_meaning else ""
     return (f"{abnormality.test_name} is {abnormality.value}{unit}, "
-            f"{abnormality.direction} the expected range{interval}")
+            f"{abnormality.direction} the usual range{interval}{gloss}")
 
 
 def render_fallback(brief: ClinicalBrief, escalation: Escalation) -> NarrativeDraft:
@@ -69,11 +70,13 @@ def render_fallback(brief: ClinicalBrief, escalation: Escalation) -> NarrativeDr
     questions: List[str] = []
     if abnormal:
         names = ", ".join(a.test_name for a in brief.abnormalities[:3])
-        questions.append(f"What could explain the results outside the range "
-                         f"({names})?")
+        questions.append(f"What could explain the results outside the usual "
+                         f"range ({names})?")
         questions.append("Do any of these results need to be repeated, and if "
                          "so, when?")
         questions.append("Do these results change anything about my current care?")
+        questions.append("Is there anything I should watch out for before my "
+                         "next appointment?")
 
     tips: List[str] = []
     if abnormal:
@@ -103,10 +106,19 @@ who took it. Follow these rules exactly.
    say nothing at all about whether a NOT EVALUATED result is normal.
 5. If the brief has lab notes, you may quote one word-for-word inside quotation
    marks. Never paraphrase a lab note.
-6. Write at about an eighth-grade reading level. Short sentences, second
-   person, no jargon without a plain-language gloss.
-7. doctor_questions are questions the patient should ask their doctor.
-   lifestyle_tips are practical, non-medical preparation steps. Never suggest a
+6. Write in plain everyday English, the way you would explain it to a friend
+   with no medical background. Short sentences. Say "white blood cells, which
+   fight infection" rather than "leukocytes". The brief gives you a "what it
+   measures" line for each result — use those words. Avoid jargon; when you must
+   use a lab term, gloss it immediately in ordinary words.
+7. The summary is for a worried person skimming on a phone. Three or four short
+   sentences. Say which results are outside the range and roughly what those
+   results are about — do not list every number there; the findings list does
+   that.
+8. Always give three to five doctor_questions. They are the questions this
+   patient should actually ask, specific to what came back abnormal, phrased in
+   their own voice.
+9. lifestyle_tips are practical, non-medical preparation steps. Never suggest a
    treatment, supplement, medication, or dose.
 """
 

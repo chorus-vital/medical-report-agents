@@ -210,3 +210,60 @@ def test_unknown_row_cannot_be_called_normal_however_it_is_phrased(brief, phrasi
     # I9: the normality vocabulary was narrow enough to sidestep by rewording.
     report = v.verify(Draft(key_findings=[phrasing]), brief)
     assert any(x.kind == "unknown_row" for x in report.violations), phrasing
+
+
+def test_an_ontology_gloss_is_exempt_from_the_blocklist():
+    # "The number of infection-fighting white blood cells" is ours, from the
+    # ontology — vetted repo content, not a model claim. It must not be read as
+    # the model diagnosing an infection.
+    rows = [{"test_name": "Total WBC Count", "standard_name": "Total WBC Count",
+             "observed_value": "2130", "unit": "cells/mm3",
+             "reference_range": "4000 - 10000", "flag": "RED", "panel": "CBC",
+             "loinc_code": "6690-2",
+             "explanation": "The number of infection-fighting white blood cells."}]
+    gloss_brief = b.build_brief(rows, None, [], False)
+    gloss = gloss_brief.abnormalities[0].plain_meaning
+    draft = Draft(key_findings=[f"Total WBC Count is 2130. {gloss}"])
+    report = v.verify(draft, gloss_brief)
+    assert report.kept["key_findings"], [x.detail for x in report.violations]
+
+
+def test_the_model_still_cannot_claim_an_infection_in_its_own_words():
+    rows = [{"test_name": "Total WBC Count", "standard_name": "Total WBC Count",
+             "observed_value": "2130", "unit": "cells/mm3",
+             "reference_range": "4000 - 10000", "flag": "RED", "panel": "CBC",
+             "loinc_code": "6690-2",
+             "explanation": "The number of infection-fighting white blood cells."}]
+    gloss_brief = b.build_brief(rows, None, [], False)
+    draft = Draft(summary="This low count is a sign of infection.")
+    assert not v.verify(draft, gloss_brief).summary_ok
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "White blood cells that fight infection are low.",
+        "These are infection-fighting cells.",
+        "These are infection‑fighting cells.",   # non-breaking hyphen
+        "Cells that defend against infection.",
+        "Hemoglobin is 15.3, and these cells help protect against infection.",
+    ],
+)
+def test_a_condition_word_used_as_a_definition_is_allowed(brief, text):
+    # Describing what a cell DOES is not diagnosing the patient with it.
+    report = v.verify(Draft(key_findings=[text]), brief)
+    assert report.kept["key_findings"] == [text], [x.detail for x in report.violations]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "This low count is a sign of infection.",
+        "Your results are consistent with infection.",
+        "This is likely an infection.",
+        "You have an infection.",
+        "These results indicate anaemia.",
+    ],
+)
+def test_a_condition_word_predicated_of_the_patient_is_still_caught(brief, text):
+    assert not v.verify(Draft(summary=text), brief).summary_ok

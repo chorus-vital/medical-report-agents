@@ -165,3 +165,29 @@ def test_an_analyte_evaluated_on_one_row_is_not_marked_unevaluated():
     assert "glucose" in brief.allowed_analytes
     assert "glucose" not in brief.unknown_analytes
     assert "glucose random" in brief.unknown_analytes
+
+
+def test_abnormality_carries_the_plain_language_meaning():
+    # Agent 2 already resolves a plain-English gloss per analyte. Dropping it
+    # forced both the LLM and the template to describe results in raw lab
+    # vocabulary.
+    rows = [{"test_name": "Total White Blood Cell Count (TC)",
+             "standard_name": "Total WBC Count", "observed_value": "2130",
+             "unit": "cells/mm3", "reference_range": "4000 - 10000", "flag": "RED",
+             "panel": "CBC", "loinc_code": "6690-2",
+             "explanation": "The number of infection-fighting white blood cells."}]
+    brief = b.build_brief(rows, None, [], False)
+    assert brief.abnormalities[0].plain_meaning == (
+        "The number of infection-fighting white blood cells.")
+
+
+def test_plain_meaning_is_optional():
+    rows = [{"test_name": "Odd Index", "standard_name": None,
+             "observed_value": "1.2", "unit": None, "reference_range": "2 - 5",
+             "flag": "RED", "panel": None, "loinc_code": None}]
+    assert b.build_brief(rows, None, [], False).abnormalities[0].plain_meaning is None
+
+
+def test_render_brief_gives_the_model_the_plain_meaning(dev_brief):
+    text = b.render_brief(dev_brief)
+    assert "infection-fighting" in text

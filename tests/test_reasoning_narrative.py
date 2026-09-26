@@ -208,3 +208,22 @@ async def test_narrate_raises_when_nothing_is_configured(dev_brief, monkeypatch)
     monkeypatch.setattr(n.settings, "GEMINI_API_KEY", "")
     with pytest.raises(Exception):
         await n.narrate_llm(dev_brief, e.escalate(dev_brief))
+
+
+def test_prompt_demands_plain_language_and_questions(dev_brief):
+    prompt = n.build_prompt(dev_brief, e.escalate(dev_brief))
+    lowered = prompt.lower()
+    assert "plain" in lowered
+    assert "three" in lowered or "3" in prompt          # how many questions
+    assert "jargon" in lowered
+
+
+def test_fallback_explains_a_result_in_plain_words(dev_brief):
+    draft = n.render_fallback(dev_brief, e.escalate(dev_brief))
+    joined = " ".join(draft.key_findings)
+    assert "infection-fighting" in joined
+
+
+def test_fallback_always_offers_questions_when_something_is_abnormal(dev_brief):
+    draft = n.render_fallback(dev_brief, e.escalate(dev_brief))
+    assert len(draft.doctor_questions) >= 3

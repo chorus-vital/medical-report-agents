@@ -53,6 +53,8 @@ class Abnormality:
     direction: str       # "below" | "above" | "outside"
     panel: Optional[str]
     loinc_code: Optional[str]
+    # Agent 2's one-line gloss of what the analyte measures, in ordinary words.
+    plain_meaning: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,11 @@ class ClinicalBrief:
     allowed_analytes: frozenset
     allowed_loinc: frozenset
     unknown_analytes: frozenset
+    # Ontology-authored glosses. Vetted repo content, so the verifier exempts
+    # these exact spans from the diagnosis blocklist the way it exempts a
+    # quoted lab note — "infection-fighting white blood cells" is a definition,
+    # not a claim that the patient has an infection.
+    allowed_glosses: frozenset
 
 
 def _direction(value: Any, range_text: Optional[str]) -> str:
@@ -148,6 +155,7 @@ def build_brief(
                                          row.get("reference_range")),
                     panel=panel,
                     loinc_code=row.get("loinc_code"),
+                    plain_meaning=row.get("explanation") or None,
                 )
             )
             if panel:
@@ -184,6 +192,9 @@ def build_brief(
         # same analyte twice (fasting and random glucose), and one UNKNOWN row
         # must not make the other row's result unspeakable.
         unknown_analytes=frozenset(unknown_analytes - evaluated_analytes),
+        allowed_glosses=frozenset(
+            a.plain_meaning for a in abnormalities if a.plain_meaning
+        ),
     )
 
 
@@ -208,6 +219,8 @@ def render_brief(brief: ClinicalBrief) -> str:
                 f"  - {a.test_name}: {a.value}{unit} ({a.flag}, {a.direction} "
                 f"the interval {a.range_text})"
             )
+            if a.plain_meaning:
+                lines.append(f"      what it measures: {a.plain_meaning}")
     else:
         lines.append("")
         lines.append("No result is outside its reference interval.")
