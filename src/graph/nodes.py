@@ -3,9 +3,9 @@ LangGraph agent nodes.
 
 Currently implements:
   1. ``extract_node`` — Ingestion & Extraction agent
+  2. ``ground_node``  — Terminology & Flagging agent
 
 Upcoming:
-  2. ``ground_node``  — Terminology & Flagging  (Agent 2)
   3. ``reason_and_verify_node`` — Reasoning & Verification  (Agent 3)
 """
 
@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from src.schemas.state import PipelineState
 from src.services.extractor import extract_from_file_detailed
+from src.services.terminology import annotate_items
 
 logger = logging.getLogger(__name__)
 
@@ -100,13 +101,44 @@ async def extract_node(state: PipelineState) -> Dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Node 2 — Terminology & Flagging  (placeholder)
+# Node 2 — Terminology & Flagging
 # ═══════════════════════════════════════════════════════════════════════════
 
 async def ground_node(state: PipelineState) -> Dict[str, Any]:
-    """Placeholder — will be implemented as Agent 2."""
-    logger.info("🏷️  [ground] Placeholder — passing through")
-    return {"current_step": "grounding_complete"}
+    """
+    **Agent 2 · Terminology & Flagging**
+
+    Resolves each row Agent 1 extracted to a LOINC concept via fuzzy
+    matching against the local ontology (``data/lab_ontology.json``), then
+    evaluates the observed value against a reference interval to assign a
+    GREEN / AMBER / RED status. The report's own printed interval always
+    wins over the ontology's demographic-specific default; a test name that
+    cannot be confidently matched is left uncoded rather than mis-coded.
+
+    State consumed
+    ──────────────
+    ``extracted_items``, ``patient_info``
+
+    State produced
+    ──────────────
+    ``lab_results``, ``current_step``
+    """
+    items = state.get("extracted_items") or []
+    patient_info = state.get("patient_info")
+
+    if not items:
+        logger.info("🏷️  [ground] No extracted items to ground — passing through")
+        return {"lab_results": [], "current_step": "grounding_complete"}
+
+    results = annotate_items(items, patient_info)
+
+    coded = sum(1 for r in results if r.get("loinc_code"))
+    flag_counts = {f: sum(1 for r in results if r["flag"] == f) for f in ("GREEN", "AMBER", "RED", "UNKNOWN")}
+    logger.info(
+        "🏷️  [ground] Done — %d/%d rows matched to LOINC, flags=%s",
+        coded, len(results), flag_counts,
+    )
+    return {"lab_results": results, "current_step": "grounding_complete"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════

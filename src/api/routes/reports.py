@@ -40,6 +40,7 @@ def _build_response(
     """
     extracted = result.get("extracted_items", [])
     degraded = bool(result.get("extraction_degraded"))
+    lab_results = result.get("lab_results", [])
 
     if extracted and degraded:
         status = "degraded"
@@ -47,6 +48,12 @@ def _build_response(
         status = "success"
     else:
         status = "no_results"
+
+    coded_count = sum(1 for r in lab_results if r.get("loinc_code"))
+    flag_summary = {
+        f: sum(1 for r in lab_results if r.get("flag") == f)
+        for f in ("GREEN", "AMBER", "RED", "UNKNOWN")
+    }
 
     return {
         "report_id": report_id,
@@ -61,6 +68,13 @@ def _build_response(
             "method": result.get("extraction_method", "unknown"),
             "degraded": degraded,
             "warnings": result.get("warnings", []),
+        },
+        # Agent 2 output — LOINC-coded, flagged rows. Empty until grounding runs.
+        "lab_results": lab_results,
+        "grounding": {
+            "loinc_coded_count": coded_count,
+            "loinc_coded_of": len(lab_results),
+            "flag_summary": flag_summary,
         },
         "errors": result.get("errors", []),
     }
