@@ -99,12 +99,33 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 @app.get("/", include_in_schema=False)
 async def serve_webview():
-    """Serve the Agent 1 interactive testing webview."""
+    """Serve the original interactive testing webview."""
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(str(index_file))
     return HTMLResponse(
         "<h2>Medical Report Analyzer Webview</h2><p>Static UI not found.</p>"
+    )
+
+
+@app.get("/app", include_in_schema=False)
+@app.get("/app/{_path:path}", include_in_schema=False)
+async def serve_react_app(_path: str = ""):
+    """
+    Serve the React + GSAP reader built from ``frontend/``.
+
+    It lives beside the original page rather than replacing it, so the testing
+    webview keeps working while this one reaches parity. Build it with
+    ``npm run build`` in ``frontend/``; the bundle lands in ``static/app/``.
+    """
+    index_file = static_dir / "app" / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return HTMLResponse(
+        "<h2>Reader not built</h2>"
+        "<p>Run <code>npm install &amp;&amp; npm run build</code> in "
+        "<code>frontend/</code>.</p>",
+        status_code=503,
     )
 
 
