@@ -15,10 +15,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
+# Imported as modules, not as names: binding `verify` or `narrative` here would
+# shadow the submodule of the same name for anyone doing
+# `from src.services.reasoning import verify`.
 from src.services.reasoning import narrative as _narrative
+from src.services.reasoning import verify as _verify
 from src.services.reasoning.brief import ClinicalBrief, build_brief
 from src.services.reasoning.escalation import escalate
-from src.services.reasoning.verify import VerificationReport, verify
 
 logger = logging.getLogger(__name__)
 
@@ -88,18 +91,18 @@ async def analyze(
         )
 
     draft = None
-    verification: Optional[VerificationReport] = None
+    verification: Optional[_verify.VerificationReport] = None
     fell_back = False
 
     try:
         draft = await _narrative.narrate_llm(brief, escalation)
-        verification = verify(draft, brief)
+        verification = _verify.verify(draft, brief)
 
         if not verification.summary_ok:
             details = tuple(v.detail for v in verification.violations)
             logger.info("Agent 3 narrative rejected, retrying once: %s", details)
             draft = await _narrative.narrate_llm(brief, escalation, details)
-            verification = verify(draft, brief)
+            verification = _verify.verify(draft, brief)
 
         if not verification.summary_ok:
             logger.warning("Agent 3 narrative failed verification twice — "
@@ -113,7 +116,7 @@ async def analyze(
     if draft is None:
         fell_back = True
         draft = _narrative.render_fallback(brief, escalation)
-        verification = verify(draft, brief)
+        verification = _verify.verify(draft, brief)
 
     kept = verification.kept if verification else {}
     return ReasoningResult(
