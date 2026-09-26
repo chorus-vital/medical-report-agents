@@ -60,9 +60,10 @@ QUALIFIER_TOKENS = frozenset({
     "fasting", "random", "postprandial", "ionised", "ionized",
 })
 
-# How far outside a boundary still counts as "borderline" (AMBER) rather
-# than "alert" (RED) — expressed as a fraction of the interval's width
-# (or, for a one-sided bound, of the bound's own magnitude).
+# How far outside a boundary still counts as "borderline" (AMBER) rather than
+# "alert" (RED), as a fraction of the breached bound's own magnitude. Scaling
+# by the interval *width* instead lets a wide range swallow an extreme value:
+# with "20 - 500" the band was 48, so a result of 0 read as borderline.
 AMBER_BAND_PCT = 0.10
 
 
@@ -339,15 +340,11 @@ def evaluate_flag(
         return {"flag": "UNKNOWN", "range_low": None, "range_high": None, "range_source": "none"}
 
     low, high = range_.low, range_.high
-    if low is not None and high is not None:
-        margin = (high - low) * AMBER_BAND_PCT
-    else:
-        bound = high if high is not None else low
-        margin = abs(bound) * AMBER_BAND_PCT if bound else 0.0
-
     if low is not None and value < low:
+        margin = abs(low) * AMBER_BAND_PCT
         flag = "AMBER" if value >= low - margin else "RED"
     elif high is not None and value > high:
+        margin = abs(high) * AMBER_BAND_PCT
         flag = "AMBER" if value <= high + margin else "RED"
     else:
         flag = "GREEN"

@@ -388,3 +388,26 @@ def test_total_white_blood_cell_count_is_coded(name):
     assert match is not None, f"{name!r} should resolve to the WBC analyte"
     assert match["ontology_key"] == "wbc_count"
     assert match["loinc_code"] == "6690-2"
+
+
+# The AMBER band is a fraction of the breached bound's own magnitude, not of
+# the interval width. With a width-based band, range "20 - 500" gave a margin
+# of 48, so even a value of 0 came back AMBER — "borderline" for a result that
+# is 100% below the lower limit.
+@pytest.mark.parametrize(
+    "value,range_text,expected",
+    [
+        ("0", "20 - 500", "RED"),      # was AMBER under the width rule
+        ("13", "20 - 500", "RED"),     # real AEC row from a CBC report
+        ("19", "20 - 500", "AMBER"),   # genuinely marginal
+        ("81.1", "83 - 101", "AMBER"), # real MCV row; was RED under the width rule
+        ("74", "83 - 101", "RED"),
+    ],
+)
+def test_amber_band_scales_with_the_breached_bound(value, range_text, expected):
+    assert term.evaluate_flag(value, range_text, None, None)["flag"] == expected
+
+
+def test_amber_band_is_symmetric_on_the_upper_bound():
+    assert term.evaluate_flag("209", "20 - 200", None, None)["flag"] == "AMBER"
+    assert term.evaluate_flag("260", "20 - 200", None, None)["flag"] == "RED"
