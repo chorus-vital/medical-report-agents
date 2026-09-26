@@ -50,10 +50,25 @@ MIN_FUZZY_TERM_LEN = 4
 # analyte by at least this many points; a near-tie is ambiguous, so uncoded.
 FUZZY_MATCH_MARGIN = 5.0
 
-# How far outside a boundary still counts as "borderline" (AMBER) rather
-# than "alert" (RED) — expressed as a fraction of the interval's width
-# (or, for a one-sided bound, of the bound's own magnitude).
-AMBER_BAND_PCT = 0.10
+# Clinical qualifiers that flip or partition an analyte's meaning. Whole-string
+# scorers barely register a negating prefix — "indirect bilirubin" scores 94
+# against "direct bilirubin" — so a differing qualifier disqualifies a fuzzy
+# candidate outright, no matter how close the rest of the string is.
+QUALIFIER_TOKENS = frozenset({
+    "direct", "indirect", "conjugated", "unconjugated",
+    "free", "bound", "unbound", "total", "non",
+    "fasting", "random", "postprandial", "ionised", "ionized",
+})
+
+# How far outside a boundary still counts as "borderline" (AMBER) rather than
+# "alert" (RED). Neither scale works alone. Taking a fraction of the interval
+# *width* lets a wide range swallow an extreme value — with "20 - 500" the band
+# was 48, so a result of 0 read as borderline. Taking a fraction of the *bound*
+# lets a narrow, high-magnitude range do the same: sodium 135-145 gave a band of
+# 13.5, so 122 mEq/L — severe hyponatraemia — also read as borderline. The band
+# is the tighter of the two, which keeps both cases RED.
+AMBER_BAND_PCT = 0.10          # of the breached bound
+AMBER_BAND_WIDTH_PCT = 0.25    # of the interval width, when there is one
 
 
 # ─────────────────────────────── Ontology ────────────────────────────────────
@@ -153,6 +168,14 @@ def _candidate_terms(raw_name: str) -> List[str]:
     return terms
 
 
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _qualifier_tokens(text: str) -> set:
+    """The :data:`QUALIFIER_TOKENS` present in a name, as a set."""
+    return {w for w in _WORD.findall((text or "").lower()) if w in QUALIFIER_TOKENS}
+
+
 def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
     """
     Fuzzy-match a raw extracted test name against the local ontology.
@@ -181,7 +204,10 @@ def match_to_loinc(test_name: str) -> Optional[Dict[str, Any]]:
             break
         if len(term) < MIN_FUZZY_TERM_LEN:
             continue
+        term_qualifiers = _qualifier_tokens(term)
         for match_str, score, _ in process.extract(term, choices, scorer=fuzz.token_sort_ratio, limit=None):
+            if _qualifier_tokens(match_str) != term_qualifiers:
+                continue  # different clinical fraction/state — not a near-miss
             key = alias_index[match_str]
             if score > best_score:
                 if key != best_key:
@@ -318,16 +344,18 @@ def evaluate_flag(
         return {"flag": "UNKNOWN", "range_low": None, "range_high": None, "range_source": "none"}
 
     low, high = range_.low, range_.high
-    if low is not None and high is not None:
-        margin = (high - low) * AMBER_BAND_PCT
-    else:
-        bound = high if high is not None else low
-        margin = abs(bound) * AMBER_BAND_PCT if bound else 0.0
+    width = (high - low) if (low is not None and high is not None) else None
+
+    def _margin(bound: float) -> float:
+        band = abs(bound) * AMBER_BAND_PCT
+        if width:
+            band = min(band, width * AMBER_BAND_WIDTH_PCT)
+        return band
 
     if low is not None and value < low:
-        flag = "AMBER" if value >= low - margin else "RED"
+        flag = "AMBER" if value >= low - _margin(low) else "RED"
     elif high is not None and value > high:
-        flag = "AMBER" if value <= high + margin else "RED"
+        flag = "AMBER" if value <= high + _margin(high) else "RED"
     else:
         flag = "GREEN"
 

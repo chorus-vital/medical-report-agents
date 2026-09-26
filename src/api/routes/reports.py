@@ -76,6 +76,18 @@ def _build_response(
             "loinc_coded_of": len(lab_results),
             "flag_summary": flag_summary,
         },
+        # Agent 3 output — narrative, urgency and self-assessed confidence.
+        "summary": result.get("summary", ""),
+        "key_findings": result.get("key_findings", []),
+        "doctor_questions": result.get("doctor_questions", []),
+        "lifestyle_tips": result.get("lifestyle_tips", []),
+        "reasoning": {
+            "escalation_level": result.get("escalation_level", "routine"),
+            "escalation_reasons": result.get("escalation_reasons", []),
+            "degraded": bool(result.get("reasoning_degraded")),
+            "confidence_score": result.get("confidence_score", 0.0),
+            "dropped_claims": result.get("dropped_claims", 0),
+        },
         "errors": result.get("errors", []),
     }
 

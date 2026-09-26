@@ -18,16 +18,20 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
-def get_chat_model(temperature: float = 0.1) -> BaseChatModel:
+def get_chat_model(temperature: float = 0.1,
+                   provider: str | None = None) -> BaseChatModel:
     """
-    Return a LangChain ChatModel based on the MODEL_PROVIDER setting.
+    Return a LangChain ChatModel for ``provider``, or the MODEL_PROVIDER setting.
 
     Providers:
       - ``gemini``  → Google Gemini Flash (free AI Studio quota)
       - ``ollama``  → Local Ollama (100 % offline, zero cost)
       - ``groq``    → Groq cloud (free daily quota, ultra-fast)
+
+    ``provider`` lets a caller pin one explicitly rather than follow the global
+    setting — Agent 3 uses it to walk its own fallback chain.
     """
-    provider = settings.MODEL_PROVIDER.lower()
+    provider = (provider or settings.MODEL_PROVIDER).lower()
 
     if provider == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI

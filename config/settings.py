@@ -24,7 +24,14 @@ class Settings(BaseSettings):
 
     # --- Groq ---
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+
+    # --- Agent 3 (Reasoning) ---
+    # Ordered fallback chain, tried left to right. Agent 3 sends text and gets
+    # JSON back, so it does not need Gemini's vision client — keeping it off
+    # Gemini by default stops Agent 1 and Agent 3 competing for one free-tier
+    # quota. A provider with no API key configured is skipped.
+    REASONING_PROVIDERS: str = "groq,gemini"
 
     # --- Application ---
     SQLITE_DB_PATH: str = "data/medical_reports.db"

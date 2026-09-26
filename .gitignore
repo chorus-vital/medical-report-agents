@@ -49,3 +49,8 @@ data/medical_reports.db
 *.swo
 .DS_Store
 Thumbs.db
+
+# Frontend
+node_modules/
+src/static/app/
+frontend/tsconfig.tsbuildinfo

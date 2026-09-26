@@ -129,6 +129,25 @@
 
     /* Provenance banner: says which engine produced the results, and warns
        loudly when the LLM was unavailable and a regex fallback ran instead. */
+    .escalation { border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;
+                  font-size: 0.86rem; border-left: 4px solid; }
+    .escalation-no_data { background: #1c2128; border-color: #6e7681; color: #adbac7; }
+    .escalation-routine { background: #0f2417; border-color: #2ea043; color: #7ee2a8; }
+    .escalation-discuss_at_next_visit { background: #2a2411; border-color: #d29922;
+                                        color: #e3b341; }
+    .escalation-see_doctor_promptly { background: #2d1c10; border-color: #db6d28;
+                                      color: #f0883e; }
+    .escalation-seek_care_now { background: #2d1418; border-color: #f85149;
+                                color: #ff7b72; }
+    .analysis-block { margin-bottom: 1.1rem; }
+    .analysis-block h4 { font-size: 0.8rem; text-transform: uppercase;
+                         letter-spacing: 0.05em; color: var(--text-muted);
+                         margin: 0 0 0.4rem; }
+    .analysis-block ul { margin: 0; padding-left: 1.1rem; }
+    .analysis-block li { margin-bottom: 0.3rem; font-size: 0.86rem; }
+    .analysis-summary { font-size: 0.92rem; line-height: 1.6; }
+    .confidence-note { font-size: 0.76rem; color: var(--text-muted);
+                       margin-top: 0.6rem; }
     .extraction-banner {
       padding: 0.75rem 1rem;
       border-radius: 8px;
@@ -976,6 +995,9 @@
           <!-- Extraction provenance / degraded-mode warning -->
           <div class="extraction-banner" id="extractionBanner" style="display: none;"></div>
 
+          <!-- Agent 3 output -->
+          <div id="analysisSection" style="display:none;"></div>
+
           <!-- Patient Info -->
           <div class="patient-card" id="patientCard">
             <div class="patient-header">
@@ -1270,6 +1292,7 @@
         : (data.extracted_items || []);
       renderTableRows(rows);
       renderGroundingSummary(data.grounding);
+      renderAnalysis(data);
 
       // Raw JSON
       document.getElementById('jsonViewer').textContent = JSON.stringify(data, null, 2);
@@ -1392,6 +1415,63 @@
       navigator.clipboard.writeText(jsonText).then(() => {
         alert('JSON copied to clipboard!');
       });
+    }
+
+    // Agent 3's narrative. Every claim here has already been checked in code
+    // against the lab rows, so it is rendered as given — but escapeHtml still
+    // applies, because the text originates from a model.
+    function renderAnalysis(data) {
+      const host = document.getElementById('analysisSection');
+      const reasoning = data.reasoning || {};
+      const hasAnalysis = data.summary || (data.key_findings || []).length;
+
+      if (!hasAnalysis) {
+        host.style.display = 'none';
+        host.innerHTML = '';
+        return;
+      }
+
+      const level = reasoning.escalation_level || 'routine';
+      const levelLabel = {
+        no_data: 'No results could be read',
+        routine: 'Nothing outside range',
+        discuss_at_next_visit: 'Raise at your next appointment',
+        see_doctor_promptly: 'Show a doctor soon',
+        seek_care_now: 'Contact a doctor today',
+      }[level] || level;
+
+      const list = (title, items) => {
+        if (!items || !items.length) return '';
+        return `
+          <div class="analysis-block">
+            <h4>${title}</h4>
+            <ul>${items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
+          </div>`;
+      };
+
+      const confidence = Math.round((reasoning.confidence_score || 0) * 100);
+      const degradedNote = reasoning.degraded
+        ? ' Written from a template because the language model was unavailable.'
+        : '';
+      const dropped = reasoning.dropped_claims || 0;
+      const droppedNote = dropped
+        ? ` ${dropped} statement${dropped === 1 ? '' : 's'} could not be matched to a result and ${dropped === 1 ? 'was' : 'were'} removed.`
+        : '';
+
+      host.innerHTML = `
+        <div class="escalation escalation-${level}"><strong>${escapeHtml(levelLabel)}</strong></div>
+        <div class="analysis-block">
+          <h4>Summary</h4>
+          <div class="analysis-summary">${escapeHtml(data.summary || '')}</div>
+        </div>
+        ${list('Key findings', data.key_findings)}
+        ${list('Questions for your doctor', data.doctor_questions)}
+        ${list('Before your appointment', data.lifestyle_tips)}
+        <div class="confidence-note">
+          Confidence ${confidence}%.${degradedNote}${droppedNote}
+          This is not a medical diagnosis.
+        </div>`;
+      host.style.display = 'block';
     }
 
     function escapeHtml(str) {
