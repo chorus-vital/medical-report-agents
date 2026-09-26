@@ -156,6 +156,10 @@ async def analyze(
                                           narrative_text),
         escalation_level=escalation.level,
         escalation_reasons=reasons,
-        degraded=fell_back or brief.extraction_degraded,
+        # Only whether Agent 3 itself fell back to the template. A degraded
+        # extraction is Agent 1's warning and is surfaced separately — folding
+        # the two together told readers the language model was unavailable when
+        # it had just written their summary.
+        degraded=fell_back,
         dropped_claims=max(0, dropped),
     )

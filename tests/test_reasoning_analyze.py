@@ -188,3 +188,35 @@ async def test_dropped_claims_are_counted(dev_data, monkeypatch):
                              dev_data["report_notes"], False)
     assert result.dropped_claims == 2
     assert len(result.key_findings) == 1
+
+
+async def test_degraded_means_the_template_was_used_not_that_extraction_was(
+    dev_data, monkeypatch
+):
+    # These are different warnings with different consequences. A degraded
+    # extraction means the row list may be incomplete; a degraded narrative
+    # means the wording is templated. Collapsing them told a reader the
+    # language model was unavailable when it had just written their summary.
+    from src.services.reasoning.narrative import NarrativeDraft
+
+    async def worked(*args, **kwargs):
+        return NarrativeDraft(summary="Written by a real model.",
+                              key_findings=["Total WBC Count is 2130."])
+
+    monkeypatch.setattr("src.services.reasoning.narrative.narrate_llm", worked)
+
+    result = await r.analyze(dev_data["lab_results"], dev_data["patient_info"],
+                             dev_data["report_notes"], extraction_degraded=True)
+
+    assert result.degraded is False, "the LLM wrote this; only extraction was degraded"
+    assert result.confidence_score < 0.5, "extraction degradation still costs confidence"
+
+
+async def test_degraded_is_true_when_the_template_really_was_used(dev_data, monkeypatch):
+    async def boom(*args, **kwargs):
+        raise RuntimeError("all providers down")
+
+    monkeypatch.setattr("src.services.reasoning.narrative.narrate_llm", boom)
+    result = await r.analyze(dev_data["lab_results"], dev_data["patient_info"],
+                             dev_data["report_notes"], extraction_degraded=False)
+    assert result.degraded is True

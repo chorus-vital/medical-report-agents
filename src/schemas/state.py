@@ -35,7 +35,8 @@ class PipelineState(TypedDict, total=False):
     escalation_level: str            # no_data | routine | discuss_at_next_visit |
                                      # see_doctor_promptly | seek_care_now
     escalation_reasons: List[Dict[str, str]]
-    reasoning_degraded: bool         # True when the templated fallback was used
+    reasoning_degraded: bool         # True only when Agent 3 used its template;
+                                     # a degraded extraction is reported separately
     dropped_claims: int              # claims the verifier removed from the draft
 
     # --- Metadata ---

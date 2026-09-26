@@ -36,7 +36,6 @@ _DIAGNOSIS_PATTERNS = tuple(re.compile(p, re.I) for p in (
     r"\bcaused by\b",
     r"\bdiagnos(?:is|ed|tic)\b",
     r"\byou (?:are|appear) (?:anaemic|anemic|diabetic)\b",
-    r"\b(?:results?|values?|counts?|findings?) (?:indicate|suggest|show|point to)\b",
 ))
 
 # Condition nouns. These are context-dependent: naming what a cell DOES is a
@@ -57,11 +56,16 @@ _DEFINITIONAL = re.compile(
     re.I)
 _COMPOUND = re.compile(r"^[-\s]?(?:fighting|fighter|related|linked)\b", re.I)
 
-# Predication: the noun is being attached to this patient's results.
+# Predication: the noun is being attached to this patient's results. "Findings
+# suggest" is only a problem when a condition follows it — blocking the verb
+# phrase outright rejected two Groq drafts in a row over
+# "these findings suggest discussing the results with your doctor", and sent a
+# real report to the template for no reason.
 _PREDICATING = re.compile(
     r"\b(?:sign|signs|evidence|suggestive|indicative|consistent with|due to|"
-    r"because of|likely|probably|possible|possibly|risk of|points to|you have|"
-    r"you may have|is an?|are an?|suffering from)\b[^.]{0,30}$", re.I)
+    r"because of|likely|probably|possible|possibly|risk of|points? to|you have|"
+    r"you may have|is an?|are an?|suffering from|suggests?|suggesting|"
+    r"indicates?|indicating|shows?)\b[^.]{0,30}$", re.I)
 
 # U+2011 and friends: the model reformats our gloss and the exact-span
 # exemption stops matching, so dashes are folded before any of this runs.

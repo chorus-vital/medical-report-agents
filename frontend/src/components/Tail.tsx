@@ -199,7 +199,9 @@ export default function Tail({ data, onReset }: { data: Analysis; onReset: () =>
               <span className="conf-fill" style={{ width: `${confidence}%` }} />
             </span>
             {data.reasoning.degraded && (
-              <span>Written from a template — the language model was unavailable.</span>
+              <span>
+                Wording written from a template — no language model was reachable.
+              </span>
             )}
             {dropped > 0 && (
               <span>
@@ -207,7 +209,12 @@ export default function Tail({ data, onReset }: { data: Analysis; onReset: () =>
                 to a result and {dropped === 1 ? "was" : "were"} removed.
               </span>
             )}
-            {data.extraction.degraded && <span>Extraction was degraded.</span>}
+            {data.extraction.degraded && (
+              <span>
+                Part of the report could not be read automatically, so this list
+                may be incomplete.
+              </span>
+            )}
           </div>
 
           <button

@@ -267,3 +267,31 @@ def test_a_condition_word_used_as_a_definition_is_allowed(brief, text):
 )
 def test_a_condition_word_predicated_of_the_patient_is_still_caught(brief, text):
     assert not v.verify(Draft(summary=text), brief).summary_ok
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "These findings suggest discussing the results with your doctor.",
+        "The counts show values below the printed range.",
+        "These results indicate a need for follow-up testing.",
+    ],
+)
+def test_suggest_without_a_cause_is_allowed(brief, text):
+    # Blocking the verb phrase outright rejected two Groq drafts in a row and
+    # sent a real report to the template. What matters is whether a CAUSE is
+    # being attributed, not that the word "suggest" appeared.
+    report = v.verify(Draft(summary=text), brief)
+    assert report.summary_ok, [x.detail for x in report.violations]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "These findings suggest anaemia.",
+        "The counts indicate an infection.",
+        "These results point to a deficiency.",
+    ],
+)
+def test_suggest_with_a_cause_is_still_caught(brief, text):
+    assert not v.verify(Draft(summary=text), brief).summary_ok

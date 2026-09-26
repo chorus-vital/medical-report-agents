@@ -99,7 +99,9 @@ who took it. Follow these rules exactly.
    appear there.
 2. Never diagnose. Do not name a disease, condition, or cause. Do not write
    "anaemia", "infection", "deficiency", or any similar term. Do not write
-   "this indicates", "this suggests", "this means", or "you have".
+   "this indicates", "this suggests", "this means", or "you have". You may
+   write "these findings suggest discussing X with your doctor"; you may never
+   write "these findings suggest" followed by a condition.
 3. Describe what a value is and whether it is inside or outside its range.
    Nothing more.
 4. Never describe a result the brief does not list as outside its range, and
