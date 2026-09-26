@@ -38,16 +38,34 @@ class ReasoningResult:
     escalation_level: str = "routine"
     escalation_reasons: List[Dict[str, str]] = field(default_factory=list)
     degraded: bool = False
+    dropped_claims: int = 0
+
+
+def _coverage(brief: ClinicalBrief, narrative: str) -> float:
+    """
+    What fraction of the abnormal rows the narrative actually mentions.
+
+    Without this the score answers "how good was the extraction", while the UI
+    presents it as "how good is this analysis". A summary that names none of the
+    abnormalities is not a confident analysis, however clean its provenance.
+    """
+    if not brief.abnormalities:
+        return 1.0
+    text = (narrative or "").lower()
+    if not text.strip():
+        return 0.0
+    named = sum(1 for a in brief.abnormalities if a.test_name.lower() in text)
+    return named / len(brief.abnormalities)
 
 
 def score_confidence(brief: ClinicalBrief, verification: Any,
-                     fell_back: bool) -> float:
+                     fell_back: bool, narrative: str = "") -> float:
     """
     How much to trust this analysis, from observable signals only.
 
     The model is never asked how sure it is. A degraded extraction, uncoded
-    rows, rows Agent 2 could not evaluate, and dropped claims each pull the
-    score down independently.
+    rows, rows Agent 2 could not evaluate, an analysis that skips the abnormal
+    rows, and dropped claims each pull the score down independently.
     """
     if brief.total_rows == 0:
         return 0.0
@@ -56,6 +74,7 @@ def score_confidence(brief: ClinicalBrief, verification: Any,
     score *= 0.5 if brief.extraction_degraded else 1.0
     score *= 0.6 + 0.4 * (brief.coded_rows / brief.total_rows)
     score *= 1.0 - 0.5 * (brief.unknown_rows / brief.total_rows)
+    score *= 0.4 + 0.6 * _coverage(brief, narrative)
 
     if fell_back:
         score *= 0.4
@@ -119,13 +138,24 @@ async def analyze(
         verification = _verify.verify(draft, brief)
 
     kept = verification.kept if verification else {}
+    key_findings = kept.get("key_findings", list(draft.key_findings))
+    doctor_questions = kept.get("doctor_questions", list(draft.doctor_questions))
+    lifestyle_tips = kept.get("lifestyle_tips", list(draft.lifestyle_tips))
+
+    offered = len(draft.key_findings) + len(draft.doctor_questions) +         len(draft.lifestyle_tips)
+    dropped = offered - (len(key_findings) + len(doctor_questions) +
+                         len(lifestyle_tips))
+
+    narrative_text = " ".join([draft.summary, *key_findings])
     return ReasoningResult(
         summary=draft.summary,
-        key_findings=kept.get("key_findings", list(draft.key_findings)),
-        doctor_questions=kept.get("doctor_questions", list(draft.doctor_questions)),
-        lifestyle_tips=kept.get("lifestyle_tips", list(draft.lifestyle_tips)),
-        confidence_score=score_confidence(brief, verification, fell_back),
+        key_findings=key_findings,
+        doctor_questions=doctor_questions,
+        lifestyle_tips=lifestyle_tips,
+        confidence_score=score_confidence(brief, verification, fell_back,
+                                          narrative_text),
         escalation_level=escalation.level,
         escalation_reasons=reasons,
         degraded=fell_back or brief.extraction_degraded,
+        dropped_claims=max(0, dropped),
     )

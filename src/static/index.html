@@ -131,6 +131,7 @@
        loudly when the LLM was unavailable and a regex fallback ran instead. */
     .escalation { border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;
                   font-size: 0.86rem; border-left: 4px solid; }
+    .escalation-no_data { background: #1c2128; border-color: #6e7681; color: #adbac7; }
     .escalation-routine { background: #0f2417; border-color: #2ea043; color: #7ee2a8; }
     .escalation-discuss_at_next_visit { background: #2a2411; border-color: #d29922;
                                         color: #e3b341; }
@@ -1432,6 +1433,7 @@
 
       const level = reasoning.escalation_level || 'routine';
       const levelLabel = {
+        no_data: 'No results could be read',
         routine: 'Nothing outside range',
         discuss_at_next_visit: 'Raise at your next appointment',
         see_doctor_promptly: 'Show a doctor soon',
@@ -1451,6 +1453,10 @@
       const degradedNote = reasoning.degraded
         ? ' Written from a template because the language model was unavailable.'
         : '';
+      const dropped = reasoning.dropped_claims || 0;
+      const droppedNote = dropped
+        ? ` ${dropped} statement${dropped === 1 ? '' : 's'} could not be matched to a result and ${dropped === 1 ? 'was' : 'were'} removed.`
+        : '';
 
       host.innerHTML = `
         <div class="escalation escalation-${level}"><strong>${escapeHtml(levelLabel)}</strong></div>
@@ -1462,7 +1468,7 @@
         ${list('Questions for your doctor', data.doctor_questions)}
         ${list('Before your appointment', data.lifestyle_tips)}
         <div class="confidence-note">
-          Confidence ${confidence}%.${degradedNote}
+          Confidence ${confidence}%.${degradedNote}${droppedNote}
           This is not a medical diagnosis.
         </div>`;
       host.style.display = 'block';

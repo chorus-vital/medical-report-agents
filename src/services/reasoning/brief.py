@@ -24,7 +24,9 @@ def normalise_number(text: Any) -> str:
     Non-numeric input comes back stripped and lowercased, which keeps
     qualitative values ("Not seen") comparable without a separate path.
     """
-    raw = str(text or "").strip().replace(",", "")
+    if text is None:
+        return ""
+    raw = str(text).strip().replace(",", "")
     try:
         value = float(raw)
     except ValueError:
@@ -32,6 +34,11 @@ def normalise_number(text: Any) -> str:
     if value.is_integer():
         return str(int(value))
     return str(value).rstrip("0").rstrip(".")
+
+
+def _as_text(value: Any) -> str:
+    """String form that preserves a genuine zero, which ``or ""`` discards."""
+    return "" if value is None else str(value)
 
 
 @dataclass(frozen=True)
@@ -102,6 +109,7 @@ def build_brief(
     allowed_analytes: set = set()
     allowed_loinc: set = set()
     unknown_analytes: set = set()
+    evaluated_analytes: set = set()
     panels_seen: set = set()
     panels_with_abnormality: set = set()
 
@@ -114,6 +122,8 @@ def build_brief(
         allowed_analytes.update(names)
         if flag == "UNKNOWN":
             unknown_analytes.update(names)
+        else:
+            evaluated_analytes.update(names)
 
         if row.get("loinc_code"):
             allowed_loinc.add(row["loinc_code"])
@@ -130,7 +140,7 @@ def build_brief(
             abnormalities.append(
                 Abnormality(
                     test_name=name or row.get("test_name") or "Unnamed test",
-                    value=str(row.get("observed_value") or ""),
+                    value=_as_text(row.get("observed_value")),
                     unit=row.get("unit"),
                     range_text=str(row.get("reference_range") or ""),
                     flag=flag,
@@ -170,7 +180,10 @@ def build_brief(
         allowed_numbers=frozenset(allowed_numbers),
         allowed_analytes=frozenset(allowed_analytes),
         allowed_loinc=frozenset(allowed_loinc),
-        unknown_analytes=frozenset(unknown_analytes),
+        # A name evaluated on any row is evaluated: labs routinely print the
+        # same analyte twice (fasting and random glucose), and one UNKNOWN row
+        # must not make the other row's result unspeakable.
+        unknown_analytes=frozenset(unknown_analytes - evaluated_analytes),
     )
 
 

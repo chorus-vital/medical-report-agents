@@ -83,7 +83,7 @@ async def test_analyze_without_llm_produces_a_verified_analysis(dev_data, monkey
 
 async def test_analyze_on_an_empty_report_is_safe():
     result = await r.analyze([], None, [], False)
-    assert result.escalation_level == "routine"
+    assert result.escalation_level == "no_data"
     assert result.confidence_score == 0.0
     assert result.key_findings == []
 
@@ -138,3 +138,53 @@ async def test_analyze_carries_escalation_reasons(dev_data, monkeypatch):
     assert "anc_moderate" in ids
     for reason in result.escalation_reasons:
         assert set(reason) == {"rule_id", "test_name", "detail"}
+
+
+# ──────────── Post-merge review findings (I5, I6, I8) ────────────
+
+
+def test_confidence_falls_when_the_narrative_ignores_the_abnormalities(dev_brief):
+    # I5: the score measured provenance of the rows and whether anything was
+    # dropped, never whether the narrative said anything. A one-line summary
+    # with no findings scored 0.88 and was shown as "Confidence 88%".
+    covered = " ".join(a.test_name for a in dev_brief.abnormalities)
+    thorough = r.score_confidence(dev_brief, _Clean(), False, narrative=covered)
+    vacuous = r.score_confidence(dev_brief, _Clean(), False,
+                                 narrative="Your results are ready to review.")
+    assert vacuous < thorough
+    assert vacuous < 0.5
+
+
+def test_coverage_does_not_penalise_an_all_normal_report():
+    rows = [{"test_name": "Hemoglobin", "standard_name": "Hemoglobin",
+             "observed_value": "15.3", "unit": "g/dL", "reference_range": "13 - 17",
+             "flag": "GREEN", "panel": "CBC", "loinc_code": "718-7"}]
+    brief = b.build_brief(rows, None, [], False)
+    assert r.score_confidence(brief, _Clean(), False, narrative="All normal.") == 1.0
+
+
+async def test_empty_report_is_not_presented_as_nothing_abnormal():
+    # I6: escalation "routine" renders a green "Nothing outside range" banner.
+    # No data is not the same as no disease.
+    result = await r.analyze([], None, [], False)
+    assert result.escalation_level == "no_data"
+    assert result.confidence_score == 0.0
+
+
+async def test_dropped_claims_are_counted(dev_data, monkeypatch):
+    # I8: bullets removed by the verifier vanished with no marker and no count.
+    from src.services.reasoning.narrative import NarrativeDraft
+
+    async def poisoned(*args, **kwargs):
+        return NarrativeDraft(
+            summary="6 of 25 results are outside their reference interval.",
+            key_findings=["Your creatinine is 1.1.",
+                          "Your TSH is 4.",
+                          "Total WBC Count is 2130."],
+        )
+
+    monkeypatch.setattr("src.services.reasoning.narrative.narrate_llm", poisoned)
+    result = await r.analyze(dev_data["lab_results"], dev_data["patient_info"],
+                             dev_data["report_notes"], False)
+    assert result.dropped_claims == 2
+    assert len(result.key_findings) == 1

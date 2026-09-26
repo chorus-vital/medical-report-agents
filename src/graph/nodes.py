@@ -185,6 +185,7 @@ async def reason_and_verify_node(state: PipelineState) -> Dict[str, Any]:
             "escalation_level": "routine",
             "escalation_reasons": [],
             "reasoning_degraded": True,
+            "dropped_claims": 0,
             "current_step": "reasoning_failed",
             "errors": [f"Reasoning error: {exc}"],
         }
@@ -202,5 +203,6 @@ async def reason_and_verify_node(state: PipelineState) -> Dict[str, Any]:
         "escalation_level": result.escalation_level,
         "escalation_reasons": result.escalation_reasons,
         "reasoning_degraded": result.degraded,
+        "dropped_claims": result.dropped_claims,
         "current_step": "reasoning_complete",
     }

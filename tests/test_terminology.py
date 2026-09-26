@@ -411,3 +411,31 @@ def test_amber_band_scales_with_the_breached_bound(value, range_text, expected):
 def test_amber_band_is_symmetric_on_the_upper_bound():
     assert term.evaluate_flag("209", "20 - 200", None, None)["flag"] == "AMBER"
     assert term.evaluate_flag("260", "20 - 200", None, None)["flag"] == "RED"
+
+
+# C1 (post-merge review): a band of 10% of the *bound* is far too wide for a
+# narrow, high-magnitude interval. Sodium 135-145 gave an AMBER zone reaching
+# down to 121.5, so severe hyponatraemia read as "borderline" — and sodium,
+# chloride and MCV have no absolute threshold rule behind them, so the flag is
+# the only guard. The band is now the tighter of 10% of the bound and 25% of
+# the interval width.
+@pytest.mark.parametrize(
+    "value,range_text,expected",
+    [
+        ("122", "135 - 145", "RED"),    # severe hyponatraemia; was AMBER
+        ("133", "135 - 145", "AMBER"),  # genuinely marginal
+        ("89", "98 - 107", "RED"),      # chloride; was AMBER
+        ("10.8", "12 - 16", "RED"),     # haemoglobin; was AMBER
+        ("28.8", "32 - 36", "RED"),     # MCHC; was AMBER
+        ("159.5", "135 - 145", "RED"),  # the upper side too
+    ],
+)
+def test_narrow_intervals_do_not_get_a_wide_amber_band(value, range_text, expected):
+    assert term.evaluate_flag(value, range_text, None, None)["flag"] == expected
+
+
+def test_wide_interval_band_is_still_capped_by_the_bound():
+    # The original bug: a width-only band let range "20 - 500" tolerate 0.
+    assert term.evaluate_flag("0", "20 - 500", None, None)["flag"] == "RED"
+    assert term.evaluate_flag("13", "20 - 500", None, None)["flag"] == "RED"
+    assert term.evaluate_flag("19", "20 - 500", None, None)["flag"] == "AMBER"

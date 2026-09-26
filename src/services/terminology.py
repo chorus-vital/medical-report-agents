@@ -61,10 +61,14 @@ QUALIFIER_TOKENS = frozenset({
 })
 
 # How far outside a boundary still counts as "borderline" (AMBER) rather than
-# "alert" (RED), as a fraction of the breached bound's own magnitude. Scaling
-# by the interval *width* instead lets a wide range swallow an extreme value:
-# with "20 - 500" the band was 48, so a result of 0 read as borderline.
-AMBER_BAND_PCT = 0.10
+# "alert" (RED). Neither scale works alone. Taking a fraction of the interval
+# *width* lets a wide range swallow an extreme value — with "20 - 500" the band
+# was 48, so a result of 0 read as borderline. Taking a fraction of the *bound*
+# lets a narrow, high-magnitude range do the same: sodium 135-145 gave a band of
+# 13.5, so 122 mEq/L — severe hyponatraemia — also read as borderline. The band
+# is the tighter of the two, which keeps both cases RED.
+AMBER_BAND_PCT = 0.10          # of the breached bound
+AMBER_BAND_WIDTH_PCT = 0.25    # of the interval width, when there is one
 
 
 # ─────────────────────────────── Ontology ────────────────────────────────────
@@ -340,12 +344,18 @@ def evaluate_flag(
         return {"flag": "UNKNOWN", "range_low": None, "range_high": None, "range_source": "none"}
 
     low, high = range_.low, range_.high
+    width = (high - low) if (low is not None and high is not None) else None
+
+    def _margin(bound: float) -> float:
+        band = abs(bound) * AMBER_BAND_PCT
+        if width:
+            band = min(band, width * AMBER_BAND_WIDTH_PCT)
+        return band
+
     if low is not None and value < low:
-        margin = abs(low) * AMBER_BAND_PCT
-        flag = "AMBER" if value >= low - margin else "RED"
+        flag = "AMBER" if value >= low - _margin(low) else "RED"
     elif high is not None and value > high:
-        margin = abs(high) * AMBER_BAND_PCT
-        flag = "AMBER" if value <= high + margin else "RED"
+        flag = "AMBER" if value <= high + _margin(high) else "RED"
     else:
         flag = "GREEN"
 

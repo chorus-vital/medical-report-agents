@@ -22,8 +22,11 @@ from src.services.reasoning.brief import ClinicalBrief, normalise_number
 from src.services.terminology import _alias_index, _load_ontology
 
 _NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
-_NORMALITY = re.compile(r"\b(normal|abnormal|fine|healthy|within range|inside "
-                        r"the range)\b", re.I)
+_NORMALITY = re.compile(
+    r"\b(normal|abnormal|fine|healthy|unremarkable|satisfactory|reassuring|"
+    r"not (?:elevated|raised|low|high)|no concern|nothing to worry|"
+    r"(?:with)?in (?:the )?(?:normal |reference |expected )?(?:range|interval|limits))\b",
+    re.I)
 
 # Verbs and vocabulary that turn an observation into a diagnosis.
 _DIAGNOSIS_PATTERNS = tuple(re.compile(p, re.I) for p in (
@@ -37,9 +40,20 @@ _DIAGNOSIS_PATTERNS = tuple(re.compile(p, re.I) for p in (
     r"thalassemia|infection|deficiency|cancer|sepsis|disease|disorder|syndrome)\b",
 ))
 
-# Small integers and ordinals appear in ordinary prose ("one of your results").
-_FREE_NUMBERS = frozenset({"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-                           "100"})
+# Numbers spelled as words, which the digit scan cannot see. Only decimals are
+# rejected: "one of your results" is ordinary prose, "nine point two" is a value.
+_WORD_DECIMAL = re.compile(
+    r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+    r"thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|"
+    r"forty|fifty|sixty|seventy|eighty|ninety|hundred)\s+point\s+"
+    r"(?:zero|one|two|three|four|five|six|seven|eight|nine)\b", re.I)
+
+# Acronyms are matched case-sensitively as standalone uppercase tokens, so the
+# analyte scan can reach TSH and ESR without firing on the word "alternative".
+_ACRONYM = re.compile(r"\b[A-Z][A-Z0-9]{1,6}\b")
+
+# The brief's own counts are already in allowed_numbers, so no free list is
+# needed. Every digit in the narrative must trace to a row or a count.
 
 
 @dataclass(frozen=True)
@@ -69,16 +83,26 @@ def _alias_to_loinc() -> Dict[str, str]:
     }
 
 
+# A note shorter than this is a heading or an OCR fragment, not a clinical
+# remark. Exempting one would switch a blocklist term off for the whole
+# narrative — report_notes comes from an LLM reading the PDF.
+_MIN_EXEMPT_NOTE = 20
+
+
 def _strip_lab_notes(text: str, brief: ClinicalBrief) -> str:
     """
-    Remove verbatim lab notes before the diagnosis scan.
+    Remove quoted verbatim lab notes before the diagnosis scan.
 
     A lab's own note routinely contains exactly the vocabulary the blocklist
-    bans ("rule out viral etiology in view of leukopenia"). Quoting it is the
-    point; paraphrasing it is not. Only exact spans are exempt.
+    bans ("rule out viral etiology in view of leukopenia"). Quoting it, with
+    attribution, is the point. Replaying it unquoted as our own conclusion is
+    not, so the span only earns its exemption inside quotation marks.
     """
     for note in brief.lab_notes:
-        text = text.replace(note, " ")
+        if len(note.strip()) < _MIN_EXEMPT_NOTE:
+            continue
+        for opening, closing in (('"', '"'), ("“", "”"), ("'", "'")):
+            text = text.replace(f"{opening}{note}{closing}", " ")
     return text
 
 
@@ -86,10 +110,15 @@ def _check_numbers(text: str, field: str, brief: ClinicalBrief) -> List[Violatio
     found: List[Violation] = []
     for raw in _NUMBER.findall(text):
         token = normalise_number(raw)
-        if token in _FREE_NUMBERS or token in brief.allowed_numbers:
+        if token in brief.allowed_numbers:
             continue
         found.append(Violation("number", field, text,
                                f"{raw} appears in no row of this report"))
+    match = _WORD_DECIMAL.search(text)
+    if match:
+        found.append(Violation("number", field, text,
+                               f"spelled-out value '{match.group(0)}' cannot be "
+                               f"checked against the report"))
     return found
 
 

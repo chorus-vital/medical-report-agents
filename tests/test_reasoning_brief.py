@@ -128,3 +128,40 @@ def test_render_brief_mentions_every_abnormality(dev_brief):
 
 def test_render_brief_carries_the_lab_note(dev_brief):
     assert dev_brief.lab_notes[0] in b.render_brief(dev_brief)
+
+
+def test_a_zero_observed_value_survives_the_brief():
+    # C4: `str(value or "")` turned integer 0 into "", so an ANC of 0 —
+    # agranulocytosis, maximally critical — lost its value entirely and
+    # rendered as "Absolute Neutrophil Count is  /mm3".
+    rows = [{"test_name": "Absolute Neutrophil Count",
+             "standard_name": "Absolute Neutrophil Count", "observed_value": 0,
+             "unit": "/mm3", "reference_range": "1500 - 8000", "flag": "RED",
+             "panel": "CBC", "loinc_code": "751-8"}]
+    brief = b.build_brief(rows, None, [], False)
+    assert brief.abnormalities[0].value == "0"
+    assert "0" in brief.allowed_numbers
+
+
+def test_normalise_number_keeps_zero():
+    assert b.normalise_number(0) == "0"
+    assert b.normalise_number("0") == "0"
+    assert b.normalise_number(None) == ""
+
+
+def test_an_analyte_evaluated_on_one_row_is_not_marked_unevaluated():
+    # I7: two rows sharing a standard_name, one UNKNOWN, used to put the name in
+    # both allowed_analytes and unknown_analytes — so the true claim "your
+    # glucose is normal at 92" was rejected as a claim about an unevaluated row.
+    rows = [
+        {"test_name": "Glucose Fasting", "standard_name": "Glucose",
+         "observed_value": "92", "unit": "mg/dL", "reference_range": "70 - 100",
+         "flag": "GREEN", "panel": "Diabetes", "loinc_code": "1558-6"},
+        {"test_name": "Glucose Random", "standard_name": "Glucose",
+         "observed_value": "Not done", "unit": None, "reference_range": None,
+         "flag": "UNKNOWN", "panel": "Diabetes", "loinc_code": None},
+    ]
+    brief = b.build_brief(rows, None, [], False)
+    assert "glucose" in brief.allowed_analytes
+    assert "glucose" not in brief.unknown_analytes
+    assert "glucose random" in brief.unknown_analytes

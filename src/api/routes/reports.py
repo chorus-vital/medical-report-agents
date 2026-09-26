@@ -86,6 +86,7 @@ def _build_response(
             "escalation_reasons": result.get("escalation_reasons", []),
             "degraded": bool(result.get("reasoning_degraded")),
             "confidence_score": result.get("confidence_score", 0.0),
+            "dropped_claims": result.get("dropped_claims", 0),
         },
         "errors": result.get("errors", []),
     }

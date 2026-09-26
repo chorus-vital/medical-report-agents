@@ -56,7 +56,7 @@ async def test_reason_node_on_no_rows():
     out = await reason_and_verify_node({"lab_results": []})
     assert out["current_step"] == "reasoning_complete"
     assert out["confidence_score"] == 0.0
-    assert out["escalation_level"] == "routine"
+    assert out["escalation_level"] == "no_data"
 
 
 def test_build_response_carries_the_reasoning_block(dev_data):

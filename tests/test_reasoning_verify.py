@@ -128,3 +128,85 @@ def test_counts_are_quotable(brief):
 def test_empty_draft_produces_no_violations(brief):
     report = v.verify(Draft(), brief)
     assert report.violations == ()
+
+
+# ───────────── Post-merge review findings (C2, I1, I2, I3, I4, I9) ────────────
+
+
+def test_fabricated_value_for_a_real_analyte_is_caught(brief):
+    # C2: small integers used to be exempt, which covers the whole reporting
+    # scale of haemoglobin, potassium, calcium and bilirubin. The real row is
+    # 15.3; claiming 9 must not pass.
+    draft = Draft(summary="Your haemoglobin is 9 g/dL.")
+    report = v.verify(draft, brief)
+    assert not report.summary_ok
+    assert any(x.kind == "number" for x in report.violations)
+
+
+def test_untested_acronym_analyte_is_caught(brief):
+    # I1: aliases under five characters were skipped entirely, so the model's
+    # own shorthand walked straight through.
+    draft = Draft(key_findings=["Your TSH is 4 and your ESR is 3."])
+    report = v.verify(draft, brief)
+    assert report.kept["key_findings"] == []
+
+
+def test_a_lowercase_english_word_is_not_mistaken_for_an_acronym(brief):
+    # The acronym scan must not fire on ordinary prose containing, say, "alt".
+    draft = Draft(key_findings=["There is an alternative worth discussing."])
+    report = v.verify(draft, brief)
+    assert not [x for x in report.violations if x.kind == "analyte"]
+
+
+def test_restating_a_lab_note_as_your_own_conclusion_is_caught(brief):
+    # I2: the exemption was span-based, so the lab's hedged "rule out" could be
+    # replayed unattributed as a conclusion.
+    note = brief.lab_notes[0]
+    draft = Draft(summary=f"{note} That is what your results show.")
+    report = v.verify(draft, brief)
+    assert not report.summary_ok
+
+
+def test_a_quoted_lab_note_is_still_exempt(brief):
+    note = brief.lab_notes[0]
+    draft = Draft(summary=f'Your lab printed this note: "{note}"')
+    report = v.verify(draft, brief)
+    assert report.summary_ok, [x.detail for x in report.violations]
+
+
+def test_a_short_lab_note_cannot_disable_a_blocklist_term():
+    # I3: report_notes comes from Agent 1 reading the PDF. A one-word note like
+    # a section heading used to switch that term off for the whole narrative.
+    rows = [{"test_name": "Hemoglobin", "standard_name": "Hemoglobin",
+             "observed_value": "15.3", "unit": "g/dL", "reference_range": "13 - 17",
+             "flag": "GREEN", "panel": "CBC", "loinc_code": "718-7"}]
+    short_note_brief = b.build_brief(rows, None, ["infection"], False)
+    draft = Draft(summary="There are signs of infection here.")
+    assert not v.verify(draft, short_note_brief).summary_ok
+
+
+def test_a_spelled_out_decimal_is_caught(brief):
+    # I4: the retry prompt names the offending number, which invites the model
+    # to spell it out instead.
+    draft = Draft(summary="Your haemoglobin is nine point two grams per decilitre.")
+    assert not v.verify(draft, brief).summary_ok
+
+
+def test_ordinary_number_words_are_not_flagged(brief):
+    draft = Draft(key_findings=["One of your results is outside its range."])
+    assert not [x for x in v.verify(draft, brief).violations if x.kind == "number"]
+
+
+@pytest.mark.parametrize(
+    "phrasing",
+    [
+        "Your Malarial Parasite result is normal.",
+        "Your Malarial Parasite result is unremarkable.",
+        "Your Malarial Parasite result is within the reference interval.",
+        "Your Malarial Parasite result is not elevated.",
+    ],
+)
+def test_unknown_row_cannot_be_called_normal_however_it_is_phrased(brief, phrasing):
+    # I9: the normality vocabulary was narrow enough to sidestep by rewording.
+    report = v.verify(Draft(key_findings=[phrasing]), brief)
+    assert any(x.kind == "unknown_row" for x in report.violations), phrasing
