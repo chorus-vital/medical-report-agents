@@ -32,6 +32,10 @@ class PipelineState(TypedDict, total=False):
     doctor_questions: List[str]
     lifestyle_tips: List[str]
     confidence_score: float
+    escalation_level: str            # routine | discuss_at_next_visit |
+                                     # see_doctor_promptly | seek_care_now
+    escalation_reasons: List[Dict[str, str]]
+    reasoning_degraded: bool         # True when the templated fallback was used
 
     # --- Metadata ---
     report_id: str

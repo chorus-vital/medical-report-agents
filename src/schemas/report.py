@@ -45,6 +45,9 @@ class ReportAnalysis(BaseModel):
     doctor_questions: List[str] = Field(default_factory=list)
     lifestyle_tips: List[str] = Field(default_factory=list)
     confidence_score: float = 0.0
+    escalation_level: str = "routine"
+    escalation_reasons: List[Dict[str, str]] = Field(default_factory=list)
+    reasoning_degraded: bool = False
     disclaimer: str = (
         "⚕️ This analysis is AI-generated for informational purposes only. "
         "It is NOT a medical diagnosis. Always consult a qualified healthcare "

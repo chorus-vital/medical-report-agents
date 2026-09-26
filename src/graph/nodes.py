@@ -4,9 +4,7 @@ LangGraph agent nodes.
 Currently implements:
   1. ``extract_node`` — Ingestion & Extraction agent
   2. ``ground_node``  — Terminology & Flagging agent
-
-Upcoming:
-  3. ``reason_and_verify_node`` — Reasoning & Verification  (Agent 3)
+  3. ``reason_and_verify_node`` — Reasoning & Verification agent
 """
 
 from __future__ import annotations
@@ -142,10 +140,67 @@ async def ground_node(state: PipelineState) -> Dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Node 3 — Reasoning & Verification  (placeholder)
+# Node 3 — Reasoning & Verification
 # ═══════════════════════════════════════════════════════════════════════════
 
 async def reason_and_verify_node(state: PipelineState) -> Dict[str, Any]:
-    """Placeholder — will be implemented as Agent 3."""
-    logger.info("🧠 [reason] Placeholder — passing through")
-    return {"current_step": "reasoning_complete"}
+    """
+    **Agent 3 · Reasoning & Verification**
+
+    Turns Agent 2's coded, flagged rows into a plain-language analysis whose
+    every factual claim has been checked in code against those rows. The LLM
+    writes the prose; it does not decide what is true. When it is unavailable
+    the analysis is rendered from templates instead of being dropped.
+
+    State consumed
+    ──────────────
+    ``lab_results``, ``patient_info``, ``report_notes``, ``extraction_degraded``
+
+    State produced
+    ──────────────
+    ``summary``, ``key_findings``, ``doctor_questions``, ``lifestyle_tips``,
+    ``confidence_score``, ``escalation_level``, ``escalation_reasons``,
+    ``reasoning_degraded``, ``current_step``
+    """
+    from src.services import reasoning
+
+    rows = state.get("lab_results") or []
+    logger.info("🧠 [reason] Starting — %d rows", len(rows))
+
+    try:
+        result = await reasoning.analyze(
+            rows,
+            state.get("patient_info"),
+            state.get("report_notes"),
+            bool(state.get("extraction_degraded")),
+        )
+    except Exception as exc:
+        logger.error("❌ [reason] Failed: %s", exc, exc_info=True)
+        return {
+            "summary": "",
+            "key_findings": [],
+            "doctor_questions": [],
+            "lifestyle_tips": [],
+            "confidence_score": 0.0,
+            "escalation_level": "routine",
+            "escalation_reasons": [],
+            "reasoning_degraded": True,
+            "current_step": "reasoning_failed",
+            "errors": [f"Reasoning error: {exc}"],
+        }
+
+    logger.info(
+        "🧠 [reason] Done — escalation=%s  confidence=%.2f  degraded=%s",
+        result.escalation_level, result.confidence_score, result.degraded,
+    )
+    return {
+        "summary": result.summary,
+        "key_findings": result.key_findings,
+        "doctor_questions": result.doctor_questions,
+        "lifestyle_tips": result.lifestyle_tips,
+        "confidence_score": result.confidence_score,
+        "escalation_level": result.escalation_level,
+        "escalation_reasons": result.escalation_reasons,
+        "reasoning_degraded": result.degraded,
+        "current_step": "reasoning_complete",
+    }
