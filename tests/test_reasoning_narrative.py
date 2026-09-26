@@ -73,3 +73,23 @@ def test_fallback_flags_a_degraded_extraction():
     brief = b.build_brief(rows, None, [], True)
     draft = n.render_fallback(brief, e.escalate(brief))
     assert "incomplete" in draft.summary.lower()
+
+
+def test_prompt_contains_the_brief_and_bans_diagnosis(dev_brief):
+    prompt = n.build_prompt(dev_brief, e.escalate(dev_brief))
+    assert "2130" in prompt                      # a real value from the brief
+    assert "Absolute Neutrophil Count" in prompt
+    assert "diagnos" in prompt.lower()           # the instruction not to
+    assert dev_brief.lab_notes[0] in prompt
+
+
+def test_prompt_lists_prior_violations_on_retry(dev_brief):
+    prompt = n.build_prompt(dev_brief, e.escalate(dev_brief),
+                            violations=("3150 appears in no row of this report",))
+    assert "3150 appears in no row of this report" in prompt
+
+
+def test_empty_llm_reply_is_rejected():
+    assert not n.is_usable(n.NarrativeDraft())
+    assert not n.is_usable(n.NarrativeDraft(summary="   "))
+    assert n.is_usable(n.NarrativeDraft(summary="Your white cell count is low."))

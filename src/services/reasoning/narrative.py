@@ -86,3 +86,107 @@ def render_fallback(brief: ClinicalBrief, escalation: Escalation) -> NarrativeDr
         doctor_questions=questions,
         lifestyle_tips=tips,
     )
+
+
+_SYSTEM_RULES = """\
+You are writing a plain-language explanation of one lab report for the patient
+who took it. Follow these rules exactly.
+
+1. Use only the facts in the BRIEF below. Never state a number that does not
+   appear there.
+2. Never diagnose. Do not name a disease, condition, or cause. Do not write
+   "anaemia", "infection", "deficiency", or any similar term. Do not write
+   "this indicates", "this suggests", "this means", or "you have".
+3. Describe what a value is and whether it is inside or outside its range.
+   Nothing more.
+4. Never describe a result the brief does not list as outside its range, and
+   say nothing at all about whether a NOT EVALUATED result is normal.
+5. If the brief has lab notes, you may quote one word-for-word inside quotation
+   marks. Never paraphrase a lab note.
+6. Write at about an eighth-grade reading level. Short sentences, second
+   person, no jargon without a plain-language gloss.
+7. doctor_questions are questions the patient should ask their doctor.
+   lifestyle_tips are practical, non-medical preparation steps. Never suggest a
+   treatment, supplement, medication, or dose.
+"""
+
+
+def build_prompt(brief: ClinicalBrief, escalation: Escalation,
+                 violations: tuple = ()) -> str:
+    """The full prompt: rules, the rendered brief, and any prior violations."""
+    from src.services.reasoning.brief import render_brief
+
+    sections = [
+        _SYSTEM_RULES,
+        "",
+        "BRIEF",
+        "-----",
+        render_brief(brief),
+        "",
+        f"HOW SOON TO ACT: {LEVEL_TEXT[escalation.level]}",
+    ]
+    if violations:
+        sections += [
+            "",
+            "YOUR PREVIOUS ATTEMPT WAS REJECTED. Fix each of these and do not",
+            "repeat them:",
+        ]
+        sections += [f"  - {v}" for v in violations]
+    return "\n".join(sections)
+
+
+def is_usable(draft: NarrativeDraft) -> bool:
+    """
+    Structured output guarantees shape, not content.
+
+    A reply with an empty summary is schema-valid and useless, so it is
+    treated as a failure and handed to the fallback.
+    """
+    return bool(draft.summary and draft.summary.strip())
+
+
+async def narrate_llm(brief: ClinicalBrief, escalation: Escalation,
+                      violations: tuple = ()) -> NarrativeDraft:
+    """
+    Ask Gemini for the narrative. Raises on any failure.
+
+    Reuses the extractor's client factory and retry helper rather than
+    introducing a second way of talking to the same API.
+    """
+    from google.genai import types as genai_types
+
+    from src.services.extractor import _with_retries
+    from src.services.llm_factory import get_vision_model
+
+    client = get_vision_model()
+    prompt = build_prompt(brief, escalation, violations)
+
+    config = genai_types.GenerateContentConfig(
+        temperature=0.2,
+        response_mime_type="application/json",
+        response_schema=NarrativeDraft,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(
+            disable=True
+        ),
+    )
+
+    async def call():
+        return await client.aio.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+            config=config,
+        )
+
+    response = await _with_retries(call, "Agent 3 narrative")
+
+    parsed = getattr(response, "parsed", None)
+    if isinstance(parsed, NarrativeDraft):
+        draft = parsed
+    elif isinstance(parsed, dict):
+        draft = NarrativeDraft.model_validate(parsed)
+    else:
+        draft = NarrativeDraft.model_validate_json(getattr(response, "text", "") or "{}")
+
+    if not is_usable(draft):
+        raise ValueError("LLM returned an empty narrative")
+    return draft
