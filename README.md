@@ -1,367 +1,317 @@
 # Medical Report Analyzer
 
-An intelligent, multi-agent AI framework that allows patients to upload lab and pathology reports and receive accurate, plain-language explanations with every claim traceable to source evidence and standard medical ontologies (LOINC, SNOMED CT).
+Upload a lab report, get it read back to you in plain English — with every number and every test name checked, in code, against the rows the document actually contained.
 
-## Features
+The hard part is not fluency. A language model will happily write a readable summary of a blood report. The problem is that a readable summary of a blood report is exactly the kind of text where a fabricated number reads as authoritative, and where a casual *"this suggests"* turns an information tool into an unlicensed diagnosis.
 
-- **Multi-Agent Architecture**: Specialized agents for ingestion, extraction, terminology grounding, clinical reasoning, and verification
-- **Evidence-Grounded Explanations**: Every flagged value is traceable to source document spans and standard medical codes
-- **Verification/Critic Agent**: Dedicated agent that checks generated explanations against coded evidence before release
-- **Support for Multiple Formats**: PDF, images, and manually typed reports
-- **Structured Extraction**: Test names, values, units, and reference ranges automatically extracted
-- **Terminology Resolution**: Resolves findings to LOINC and SNOMED CT codes
-- **Safety Gating**: Low-confidence claims are escalated for human review rather than presented to users
-- **FHIR Compatible**: Generates FHIR Observation resources with proper coding
+So the architecture inverts the usual arrangement: **the model writes the prose, but it does not decide what is true.** A deterministic brief is built in code and is the only thing the model sees; a deterministic verifier then checks every claim in the reply against that brief and drops what it cannot trace.
 
-## Tech Stack
+The governing principle, carried through every layer: **a wrong code is worse than no code, and a claim that cannot be traced to a row is worse than silence.**
 
-- **Framework**: FastAPI + Uvicorn
-- **AI/LLM**: LangChain, LangGraph, Google Generative AI, Groq
-- **Document Processing**: PDFPlumber, PyPDFium2, Pytesseract, Pillow
-- **Database**: SQLAlchemy with SQLite
-- **Report Generation**: ReportLab
-- **Validation**: Pydantic
+---
+
+## The pipeline
+
+Three agents, orchestrated as a LangGraph `StateGraph`.
+
+```
+ PDF / image / docx / text
+            │
+            ▼
+┌───────────────────────────┐
+│  AGENT 1  Ingestion       │  pdfplumber + pypdfium2, Gemini structured
+│           & Extraction    │  extraction, Gemini Vision for scans,
+│                           │  regex fallback when the LLM is unreachable
+└───────────────────────────┘
+            │  extracted_items, patient_info
+            ▼
+┌───────────────────────────┐
+│  AGENT 2  Terminology     │  LOINC matching against a local ontology,
+│           & Flagging      │  reference-range evaluation → GREEN / AMBER /
+│                           │  RED / UNKNOWN.  No LLM at all.
+└───────────────────────────┘
+            │  lab_results
+            ▼
+┌───────────────────────────┐
+│  AGENT 3  Reasoning       │  deterministic brief → LLM narrative →
+│           & Verification  │  deterministic verifier → confidence score
+└───────────────────────────┘
+            │
+            ▼
+     summary, key findings, questions for your doctor,
+     urgency level, confidence
+```
+
+### How Agent 3 keeps itself honest
+
+```
+lab_results ──► build_brief()  ──►  ClinicalBrief  ──► escalate()
+                  no LLM            frozen facts        no LLM
+                                         │
+                            ┌────────────┴────────────┐
+                            ▼                         ▼
+                    narrate_llm(brief)        render_fallback(brief)
+                    Groq, then Gemini           no LLM, templated
+                            │                         │
+                            ▼                         │
+                      verify(draft, brief)            │
+                          no LLM                      │
+                            │                         │
+              ┌─────────────┼──────────────┐          │
+              ▼             ▼              ▼          │
+           clean      drop bullets    retry once ─────┤
+              │             │              │          │
+              └─────────────┴──────────────┴─────────►│
+                                                      ▼
+                                            score_confidence()
+```
+
+Four of Agent 3's five modules never touch the network. The verifier runs four checks against the brief:
+
+| Check | Catches |
+|---|---|
+| **Numbers** | A value that appears nowhere in the report (including spelled-out decimals) |
+| **Analytes** | *"Your platelets are fine"* when platelets were never tested |
+| **Diagnosis language** | Naming a condition, or attributing one to the patient |
+| **Un-evaluated rows** | Calling a result "normal" that Agent 2 could not evaluate |
+
+**A stated limit:** this bounds fabricated *facts*; it cannot bound unsound *reasoning*. A claim built from real numbers that names no recognised analyte passes all four checks. That is a large part of why the product deliberately stops at facts and urgency, and never names a condition.
+
+---
 
 ## Prerequisites
 
-- Python 3.9 or higher
-- pip (Python package manager)
-- Virtual environment (recommended)
-- API keys for:
-  - Google Generative AI (for Gemini API)
-  - Groq (optional, for alternative LLM provider)
-  - Anthropic (optional, for Claude models)
+- **Python 3.10+** (developed on 3.13)
+- **Node 20.19+ or 22.12+** — only needed for the React frontend
+- A **Groq** API key (free, no card) — <https://console.groq.com>
+- A **Gemini** API key (free tier) — <https://aistudio.google.com>
 
-## Installation
+Gemini is required for extraction: it is the only one of the three providers with a usable free vision API, which scanned reports need. Groq handles Agent 3's narrative, which keeps the two agents off the same quota.
 
-### 1. Clone the Repository
+---
+
+## Setup
+
+### 1. Clone and enter
 
 ```bash
-git clone https://github.com/yourusername/medical-report-analyzer.git
-cd medical-report-analyzer
+git clone https://github.com/chorus-vital/medical-report-agents.git
+cd medical-report-agents
 ```
 
-### 2. Create and Activate Virtual Environment
+### 2. Python environment
 
-**On Windows (PowerShell):**
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-
-**On macOS/Linux:**
 ```bash
 python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux
 source venv/bin/activate
-```
 
-### 3. Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
+### 3. Configure keys
 
-Create a `.env` file in the project root:
+`.env` is gitignored, so create it in the project root:
+
+```ini
+# Extraction (Agent 1) — needs Gemini for vision
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.6-flash
+
+# Reasoning (Agent 3) — ordered fallback chain, tried left to right.
+# A provider with no key is skipped. If all fail, Agent 3 still returns a
+# verified templated analysis rather than nothing.
+REASONING_PROVIDERS=groq,gemini
+GROQ_API_KEY=your_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+> **Model ids go stale.** Groq retires models; `llama-3.3-70b-versatile` no longer exists. If you see a 404 from Groq, list what your key can reach:
+> ```bash
+> python -c "from groq import Groq; from config.settings import settings; print([m.id for m in Groq(api_key=settings.GROQ_API_KEY).models.list().data])"
+> ```
+
+### 4. Build the frontend (optional)
+
+Only needed for the React reader at `/app`. The original webview at `/` works without it.
 
 ```bash
-cp .env.example .env
+cd frontend
+npm install
+npm run build      # outputs to src/static/app/, served by FastAPI
+cd ..
 ```
 
-Edit `.env` and add your API keys:
+---
 
-```env
-# API Configuration
-GEMINI_API_KEY=your_gemini_api_key_here
-GROQ_API_KEY=your_groq_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Server Configuration
-DEBUG=true
-HOST=localhost
-PORT=8000
-
-# Database
-DATABASE_URL=sqlite:///./reports.db
-
-# Security
-JWT_SECRET=your_secret_key_here
-```
-
-Refer to `.env.example` for all available configuration options.
-
-## Running the Application
-
-### Start the Server
+## Running it
 
 ```bash
 python main.py
 ```
 
-The server will start at `http://localhost:8000`
+| URL | What it is |
+|---|---|
+| <http://localhost:8000/app> | React + GSAP reader — scroll-driven, with a 3D cell view |
+| <http://localhost:8000/> | Original testing webview — dense table, raw JSON |
+| <http://localhost:8000/docs> | OpenAPI / Swagger |
+| <http://localhost:8000/api/health/llm> | Live provider connectivity check |
 
-### Access the API Documentation
+### Frontend development
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Run Tests
-
-```bash
-pytest
-```
-
-## API Endpoints
-
-### Report Management
-
-- **POST** `/api/v1/reports/upload` - Upload a report (PDF/image/typed)
-- **POST** `/api/v1/reports/process` - Trigger the agent pipeline (SSE stream)
-- **GET** `/api/v1/reports/{id}/status` - Get processing status
-- **GET** `/api/v1/reports/{id}/result` - Get final analysis result
-- **GET** `/api/v1/reports/{id}/audit` - Get agent decision audit trail
-- **GET** `/api/v1/reports/trends` - Get trend data across multiple reports
-
-### Review Queue
-
-- **GET** `/api/v1/review/queue` - Get pending reviews for clinician
-- **POST** `/api/v1/reports/{id}/review/resume` - Resume after human review
-
-### Export
-
-- **POST** `/api/v1/reports/{id}/export/pdf` - Generate downloadable PDF summary
-
-### Health Check
-
-- **GET** `/api/v1/health` - Server health status
-
-## Project Structure
-
-```
-medical-report-analyzer/
-├── src/
-│   ├── api/                 # FastAPI application and routes
-│   ├── db/                  # Database models and initialization
-│   ├── graph/               # LangGraph agent orchestration
-│   ├── schemas/             # Pydantic data models
-│   ├── services/            # Business logic and utilities
-│   └── static/              # Static assets
-├── config/                  # Configuration settings
-├── data/                    # Sample data and ontologies
-│   ├── lab_ontology.json    # LOINC/SNOMED mappings
-│   └── samples/             # Sample reports
-├── .ai-reference/           # Project documentation
-│   ├── PRD.md              # Product Requirements Document
-│   ├── ARCHITECTURE.md     # System architecture
-│   └── ARCHITECTURE_FRONTEND.md
-├── .env.example            # Environment variables template
-├── main.py                 # Application entrypoint
-├── requirements.txt        # Python dependencies
-├── pytest.ini              # Pytest configuration
-└── README.md              # This file
-```
-
-## Architecture
-
-The system uses a multi-agent orchestration pattern via LangGraph:
-
-```
-Upload → Ingestion Agent → Extraction Agent → Terminology Grounding Agent
-                                                      ↓
-                                          Clinical Reasoning Agent
-                                                      ↓
-                                         Verification/Critic Agent
-                                                      ↓
-                                    Escalation Queue (if needed)
-                                                      ↓
-                                            Explanation Agent
-                                                      ↓
-                                        Final Report & PDF
-```
-
-Each agent has:
-- Specialized role and input/output types
-- Confidence scoring
-- Decision audit trail
-- Integration with medical ontologies
-
-For detailed architecture information, see [ARCHITECTURE.md](.ai-reference/ARCHITECTURE.md).
-
-## Key Components
-
-### 1. Ingestion Agent
-Parses PDF/image reports and extracts structured text with layout awareness
-
-### 2. Extraction Agent
-Identifies and structures test results (name, value, unit, reference range)
-
-### 3. Terminology Grounding Agent
-Resolves findings to standard medical codes (LOINC, SNOMED CT)
-
-### 4. Clinical Reasoning Agent
-Generates plain-language explanations with clinical context
-
-### 5. Verification/Critic Agent
-**Core Research Contribution**: Validates explanations against coded evidence
-- Detects unsupported claims
-- Enforces escalation for low-confidence outputs
-- Reduces hallucinations vs. single-pass LLM
-
-### 6. Explanation Agent
-Generates patient-facing summaries and exports
-
-## Configuration
-
-### Supported Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEBUG` | false | Enable debug mode and hot reload |
-| `HOST` | localhost | Server host address |
-| `PORT` | 8000 | Server port |
-| `DATABASE_URL` | sqlite:///./reports.db | Database connection URL |
-| `JWT_SECRET` | - | Secret key for JWT authentication |
-| `GEMINI_API_KEY` | - | Google Generative AI API key |
-| `GROQ_API_KEY` | - | Groq API key |
-| `ANTHROPIC_API_KEY` | - | Anthropic API key |
-
-## Development
-
-### Install Dev Dependencies
+Hot reload, with `/api` proxied to the backend. **Both** servers must be running.
 
 ```bash
-pip install -r requirements.txt
+python main.py                 # terminal 1
+cd frontend && npm run dev     # terminal 2 → http://localhost:5173
 ```
-
-### Run Tests
-
-```bash
-pytest -v
-```
-
-### Run Tests with Coverage
-
-```bash
-pytest --cov=src
-```
-
-## Documentation
-
-- **Product Requirements**: [PRD.md](.ai-reference/PRD.md)
-- **System Architecture**: [ARCHITECTURE.md](.ai-reference/ARCHITECTURE.md)
-- **Frontend Architecture**: [ARCHITECTURE_FRONTEND.md](.ai-reference/ARCHITECTURE_FRONTEND.md)
-
-## Data Models
-
-### Report
-```
-- id: UUID
-- user_id: UUID
-- file_url: string
-- file_type: PDF | IMAGE | TYPED
-- status: UPLOADED | PROCESSING | COMPLETED | ESCALATED | FAILED
-- created_at: datetime
-- updated_at: datetime
-```
-
-### LabResult (Extracted)
-```
-- id: UUID
-- report_id: UUID
-- test_name: string
-- observed_value: string
-- unit: string (optional)
-- reference_range: string (optional)
-- flag: GREEN | AMBER | RED (optional)
-- loinc_code: string (optional)
-- snomed_code: string (optional)
-- fhir_observation: FHIR Observation (JSON)
-- confidence: float
-- source_span: {start: int, end: int}
-```
-
-### AnalysisResult
-```
-- id: UUID
-- report_id: UUID
-- plain_language_summary: string
-- flagged_findings: array of {test, flag, explanation}
-- verification_status: APPROVED | REVISED | ESCALATED
-- verification_confidence: float
-- escalation_reason: string (optional)
-- audit_trail: array of agent decisions
-- created_at: datetime
-```
-
-## Safety & Privacy
-
-⚠️ **Disclaimer**: This system is designed for educational and research purposes. It is NOT intended for clinical decision-making without medical professional review.
-
-### Security Features
-
-- TLS 1.2+ encryption in transit
-- Field-level encryption for sensitive data
-- Role-based access control
-- Comprehensive audit logging
-- Data retention policies with deletion on request
-
-### Compliance
-
-Designed with consideration for:
-- HIPAA-style safeguards
-- DPDP Act 2023 (India)
-- ABDM/FHIR profile alignment
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes and add tests
-4. Commit with clear messages: `git commit -am 'Add feature'`
-5. Push to the branch: `git push origin feature/your-feature`
-6. Submit a pull request
-
-## License
-
-[Add your license here - MIT, Apache 2.0, etc.]
-
-## Authors
-
-**Swarup Futane** - Initial development
-
-## Acknowledgments
-
-- Medical ontologies: LOINC, SNOMED CT
-- LLM providers: Google, Groq, Anthropic
-- Document parsing: PDFPlumber, PyPDFium2, Pytesseract
-
-## Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Check existing documentation in `.ai-reference/`
-- Review API documentation at `/docs` when server is running
-
-## Roadmap
-
-### Current Release
-- ✅ Multi-agent architecture with verification
-- ✅ PDF/image report parsing
-- ✅ Test extraction and terminology grounding
-- ✅ Safety gating and escalation
-
-### Planned Features
-- ⏳ Frontend UI for patient portal
-- ⏳ Trend analysis across multiple reports
-- ⏳ Chest X-ray interpretation module
-- ⏳ Multi-language support
-- ⏳ B2B API with white-label options
-- ⏳ Kubernetes deployment templates
 
 ---
 
-**Status**: Under Active Development  
-**Last Updated**: August 2026
+## Testing
+
+```bash
+# 269 offline tests. No API key needed, no quota consumed, ~2s.
+python -m pytest -q
+
+# Hits the real LLM APIs. Deselected by default.
+python -m pytest -m live -q
+```
+
+The reasoning tests run against `tests/fixtures/dev_chavan_agent2.json` — real Agent 2 output captured from a real report — so the whole layer is testable offline. Re-capture it after an ontology or extractor change:
+
+```bash
+python scripts/capture_fixture.py "path/to/report.pdf" tests/fixtures/dev_chavan_agent2.json
+```
+
+---
+
+## API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/reports/analyze` | Upload a file, run the full pipeline |
+| `POST` | `/api/reports/analyze-text` | Same, from pasted text |
+| `GET` | `/api/reports/samples` | List bundled sample reports |
+| `POST` | `/api/reports/analyze-sample/{filename}` | Run a bundled sample |
+| `GET` | `/api/health` | Service health |
+| `GET` | `/api/health/llm` | Live provider reachability |
+
+### Response shape
+
+```json
+{
+  "status": "success",
+  "patient_info": { "name": "...", "age": "23 Year(s)", "sex": "Male" },
+  "lab_results": [
+    {
+      "test_name": "Total White Blood Cell Count (TC)",
+      "standard_name": "Total WBC Count",
+      "loinc_code": "6690-2",
+      "observed_value": "2130",
+      "unit": "cells/mm³",
+      "reference_range": "4000 - 10000",
+      "flag": "RED",
+      "explanation": "The number of infection-fighting white blood cells.",
+      "match_confidence": 100.0,
+      "range_source": "report"
+    }
+  ],
+  "extraction": { "method": "gemini:...", "degraded": false, "warnings": [] },
+  "grounding": { "loinc_coded_count": 21, "loinc_coded_of": 25, "flag_summary": {} },
+  "summary": "Several of your blood counts are lower than the usual range...",
+  "key_findings": ["..."],
+  "doctor_questions": ["..."],
+  "lifestyle_tips": ["..."],
+  "reasoning": {
+    "escalation_level": "see_doctor_promptly",
+    "escalation_reasons": [
+      { "rule_id": "anc_moderate", "test_name": "Absolute Neutrophil Count",
+        "detail": "Absolute Neutrophil Count 1035 is below 1500 /mm3" }
+    ],
+    "degraded": false,
+    "confidence_score": 0.82,
+    "dropped_claims": 0
+  }
+}
+```
+
+Two fields worth understanding:
+
+- **`extraction.degraded`** — Agent 1 fell back to the regex parser, so the row list may be incomplete.
+- **`reasoning.degraded`** — Agent 3 wrote from its template because no LLM was reachable. **These are different failures** and are reported separately; a degraded extraction does not mean the wording is templated.
+
+---
+
+## Escalation levels
+
+Derived in code from published critical values, never from the model. Every level is traceable to the rule and row that produced it. Units are converted from each row's **declared** unit, and a rule refuses to fire on an unrecognised one.
+
+| Level | Meaning |
+|---|---|
+| `no_data` | No results could be read |
+| `routine` | Nothing outside its reference range |
+| `discuss_at_next_visit` | Borderline results only |
+| `see_doctor_promptly` | Any result outside range, or a moderate threshold rule |
+| `seek_care_now` | A critical value fired |
+
+---
+
+## Project structure
+
+```
+medical-report-agents/
+├── src/
+│   ├── api/                      FastAPI app and routes
+│   ├── graph/                    LangGraph nodes and pipeline
+│   ├── schemas/                  Pydantic models, pipeline state
+│   ├── services/
+│   │   ├── extractor.py          Agent 1
+│   │   ├── terminology.py        Agent 2
+│   │   ├── pdf_text.py           Dual-engine PDF text + mojibake repair
+│   │   ├── llm_factory.py        Gemini / Groq / Ollama
+│   │   └── reasoning/            Agent 3
+│   │       ├── __init__.py       analyze(), score_confidence()
+│   │       ├── brief.py          the frozen fact set
+│   │       ├── escalation.py     urgency rules
+│   │       ├── narrative.py      provider chain + templated fallback
+│   │       └── verify.py         the four checks
+│   └── static/
+│       ├── index.html            original webview
+│       └── app/                  built React bundle (gitignored)
+├── frontend/                     Vite + React 19 + GSAP + three.js
+├── data/lab_ontology.json        55 analytes, LOINC codes, ranges
+├── docs/superpowers/             design specs and implementation plans
+├── scripts/capture_fixture.py    regenerate the test fixture
+└── tests/                        269 offline + 2 live
+```
+
+---
+
+## Known limits
+
+1. **The escalation thresholds are clinical content maintained by non-clinicians.** Every value is a published critical value and every fired rule is traceable, but **nobody qualified has reviewed the numbers.** This warrants a clinician's eye before real patients see it.
+2. **The verifier bounds invented facts, not invented reasoning** — stated plainly in `verify.py`'s own docstring rather than glossed over.
+3. **No persistence.** `SQLITE_DB_PATH` is configured but nothing writes to it; every analysis is lost once the response is sent.
+4. **No SNOMED CT, no FHIR export.** LOINC only.
+5. **The frontend has no automated tests.**
+6. **Gemini's free tier is small.** Heavy testing exhausts it, after which Agent 1 falls back to the regex parser — visible as a degraded-extraction warning and a lower confidence score.
+
+---
+
+## Safety
+
+- No condition is ever named. The output describes what a value is, whether it sits inside its interval, and how soon to act.
+- The 3D cell view is **anatomical, never pathological** — it shows what a cell is and how many there are, never what a low count does to you. A picture cannot be checked the way the verifier checks prose.
+- A lab's own printed notes are reproduced **verbatim and attributed**, never paraphrased.
+- Every response carries a disclaimer. This is not a diagnosis, and it is not a substitute for a clinician.
+
+---
+
+## Licence
+
+Not yet chosen. Until a `LICENSE` file is added, default copyright applies and
+the code carries no grant of use — worth settling before this goes public.
