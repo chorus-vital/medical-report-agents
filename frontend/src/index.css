@@ -787,13 +787,97 @@ button {
   border-radius: 20px;
   overflow: hidden;
   background:
-    radial-gradient(70% 90% at 50% 0%, rgba(90, 120, 255, 0.07), transparent 70%),
-    linear-gradient(180deg, var(--ink-2), var(--ink));
+    radial-gradient(75% 95% at 50% 0%, rgba(90, 120, 255, 0.09), transparent 70%),
+    linear-gradient(180deg, #11141b, var(--ink));
 }
 
 .scene-canvas {
-  height: clamp(20rem, 52vh, 34rem);
+  height: clamp(22rem, 58vh, 38rem);
   width: 100%;
+  cursor: grab;
+}
+
+.scene-canvas:active { cursor: grabbing; }
+
+.scene-picker {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.25s;
+}
+
+.chip:hover:not(:disabled) {
+  color: var(--text);
+  border-color: #3a4354;
+  transform: translateY(-1px);
+}
+
+.chip:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.chip-on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--ink);
+}
+
+.scene-tools {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.scene-tools .chip {
+  backdrop-filter: blur(14px);
+  background: rgba(14, 17, 23, 0.7);
+}
+
+.scene-tools .chip-on {
+  background: var(--text);
+  color: var(--ink);
+}
+
+.scene-tip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(14px, -50%);
+  pointer-events: none;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(12, 15, 21, 0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.95);
+  max-width: 17rem;
+}
+
+.scene-tip strong {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.scene-tip span {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  line-height: 1.45;
 }
 
 .scene-labels {
@@ -803,7 +887,7 @@ button {
   justify-content: space-around;
   gap: 1rem;
   padding: 1.1rem 1.4rem 1.4rem;
-  background: linear-gradient(180deg, transparent, rgba(10, 12, 16, 0.85) 55%);
+  background: linear-gradient(180deg, transparent, rgba(10, 12, 16, 0.88) 55%);
   pointer-events: none;
   flex-wrap: wrap;
 }
@@ -855,4 +939,13 @@ button {
   font-family: var(--mono);
   font-size: 0.76rem !important;
   color: var(--text-faint) !important;
+}
+
+@media (max-width: 720px) {
+  .scene-tools {
+    position: static;
+    padding: 0.9rem 1rem 0;
+    justify-content: flex-start;
+  }
+  .scene-tip { display: none; }
 }
