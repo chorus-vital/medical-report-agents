@@ -3,8 +3,11 @@
  * disclaimer that has to be on screen whether or not anyone scrolled.
  */
 
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import type { Analysis, Flag, LabRow } from "../lib/api";
+// three.js is ~1MB of the bundle and is only ever needed once a report is on
+// screen, so it loads on demand rather than blocking the upload page.
+const CellScene = lazy(() => import("./CellScene"));
 
 /** Questions as a horizontal accordion — one open at a time, click or hover. */
 function Questions({ questions }: { questions: string[] }) {
@@ -135,6 +138,10 @@ export default function Tail({ data, onReset }: { data: Analysis; onReset: () =>
 
   return (
     <>
+      <Suspense fallback={null}>
+        <CellScene rows={data.lab_results} />
+      </Suspense>
+
       <Questions questions={data.doctor_questions} />
 
       {data.lifestyle_tips.length > 0 && (
