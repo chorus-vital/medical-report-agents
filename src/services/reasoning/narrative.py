@@ -145,22 +145,46 @@ def is_usable(draft: NarrativeDraft) -> bool:
     return bool(draft.summary and draft.summary.strip())
 
 
-async def narrate_llm(brief: ClinicalBrief, escalation: Escalation,
-                      violations: tuple = ()) -> NarrativeDraft:
-    """
-    Ask Gemini for the narrative. Raises on any failure.
+# Which setting must hold a key before a provider is worth trying. Ollama runs
+# locally and needs none.
+_PROVIDER_KEYS = {
+    "groq": "GROQ_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "ollama": None,
+}
 
-    Reuses the extractor's client factory and retry helper rather than
-    introducing a second way of talking to the same API.
+
+def configured_providers() -> tuple:
     """
+    The fallback chain, in order, with unconfigured providers dropped.
+
+    Names that are not providers are ignored rather than raising: a typo in
+    REASONING_PROVIDERS should cost one provider, not the whole analysis.
+    """
+    chain = []
+    for name in (settings.REASONING_PROVIDERS or "").split(","):
+        name = name.strip().lower()
+        if name not in _PROVIDER_KEYS:
+            if name:
+                logger.warning("Ignoring unknown reasoning provider %r", name)
+            continue
+        key_setting = _PROVIDER_KEYS[name]
+        if key_setting and not getattr(settings, key_setting, ""):
+            logger.debug("Skipping %s: %s not set", name, key_setting)
+            continue
+        if name not in chain:
+            chain.append(name)
+    return tuple(chain)
+
+
+async def _narrate_gemini(prompt: str) -> NarrativeDraft:
+    """Gemini's native structured output, which constrains decoding to the schema."""
     from google.genai import types as genai_types
 
     from src.services.extractor import _with_retries
     from src.services.llm_factory import get_vision_model
 
     client = get_vision_model()
-    prompt = build_prompt(brief, escalation, violations)
-
     config = genai_types.GenerateContentConfig(
         temperature=0.2,
         response_mime_type="application/json",
@@ -177,16 +201,86 @@ async def narrate_llm(brief: ClinicalBrief, escalation: Escalation,
             config=config,
         )
 
-    response = await _with_retries(call, "Agent 3 narrative")
+    response = await _with_retries(call, "Agent 3 narrative (gemini)")
 
     parsed = getattr(response, "parsed", None)
     if isinstance(parsed, NarrativeDraft):
-        draft = parsed
-    elif isinstance(parsed, dict):
-        draft = NarrativeDraft.model_validate(parsed)
-    else:
-        draft = NarrativeDraft.model_validate_json(getattr(response, "text", "") or "{}")
+        return parsed
+    if isinstance(parsed, dict):
+        return NarrativeDraft.model_validate(parsed)
+    return NarrativeDraft.model_validate_json(getattr(response, "text", "") or "{}")
 
-    if not is_usable(draft):
-        raise ValueError("LLM returned an empty narrative")
-    return draft
+
+async def _narrate_langchain(provider: str, prompt: str) -> NarrativeDraft:
+    """
+    Groq and Ollama through LangChain's structured-output binding.
+
+    Neither has Gemini's ``response_schema``, so the shape is enforced by tool
+    calling or JSON mode depending on the model. That is a weaker guarantee, but
+    the verifier does not trust any of them anyway — a malformed reply raises
+    here and the chain moves on.
+    """
+    from src.services.extractor import _with_retries
+    from src.services.llm_factory import get_chat_model
+
+    model = get_chat_model(temperature=0.2, provider=provider)
+    structured = model.with_structured_output(NarrativeDraft)
+
+    async def call():
+        return await structured.ainvoke(prompt)
+
+    result = await _with_retries(call, f"Agent 3 narrative ({provider})")
+
+    if isinstance(result, NarrativeDraft):
+        return result
+    if isinstance(result, dict):
+        return NarrativeDraft.model_validate(result)
+    raise ValueError(f"{provider} returned {type(result).__name__}, not a narrative")
+
+
+async def _call_provider(provider: str, prompt: str) -> NarrativeDraft:
+    """Dispatch one provider. Raises on any failure, so the chain can move on."""
+    if provider == "gemini":
+        return await _narrate_gemini(prompt)
+    return await _narrate_langchain(provider, prompt)
+
+
+async def narrate_llm(brief: ClinicalBrief, escalation: Escalation,
+                      violations: tuple = ()) -> NarrativeDraft:
+    """
+    Ask each configured provider in turn for the narrative. Raises if none works.
+
+    Raising is the contract ``analyze`` depends on: it renders the verified
+    template instead, so an outage degrades the wording rather than emptying the
+    analysis.
+    """
+    providers = configured_providers()
+    if not providers:
+        raise RuntimeError(
+            "No reasoning provider is configured. Set GROQ_API_KEY (free at "
+            "https://console.groq.com) or GEMINI_API_KEY, or point "
+            "REASONING_PROVIDERS at a running Ollama."
+        )
+
+    prompt = build_prompt(brief, escalation, violations)
+    last: Exception | None = None
+
+    for provider in providers:
+        try:
+            draft = await _call_provider(provider, prompt)
+        except Exception as exc:
+            last = exc
+            logger.warning("Agent 3 narrative via %s failed (%s) — trying next",
+                           provider, str(exc)[:200])
+            continue
+
+        if not is_usable(draft):
+            last = ValueError(f"{provider} returned an empty narrative")
+            logger.warning("Agent 3 narrative via %s was empty — trying next",
+                           provider)
+            continue
+
+        logger.info("Agent 3 narrative written by %s", provider)
+        return draft
+
+    raise last or RuntimeError("No reasoning provider produced a narrative")
