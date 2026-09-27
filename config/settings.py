@@ -2,6 +2,7 @@
 Application settings loaded from environment variables / .env file.
 """
 
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -35,7 +36,8 @@ class Settings(BaseSettings):
 
     # --- Application ---
     SQLITE_DB_PATH: str = "data/medical_reports.db"
-    UPLOAD_DIR: str = "data/uploads"
+    # Vercel's filesystem is read-only apart from /tmp.
+    UPLOAD_DIR: str = "/tmp/uploads" if os.environ.get("VERCEL") else "data/uploads"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True
