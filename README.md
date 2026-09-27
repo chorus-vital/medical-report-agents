@@ -136,7 +136,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 
 ### 4. Build the frontend (optional)
 
-Only needed for the React reader at `/app`. The original webview at `/` works without it.
+Only needed for the React reader at `/`. The original webview at `/legacy` works without it.
 
 ```bash
 cd frontend
@@ -155,8 +155,8 @@ python main.py
 
 | URL | What it is |
 |---|---|
-| <http://localhost:8000/app> | React + GSAP reader — scroll-driven, with a 3D cell view |
-| <http://localhost:8000/> | Original testing webview — dense table, raw JSON |
+| <http://localhost:8000/> | React + GSAP reader — scroll-driven, with a 3D cell view |
+| <http://localhost:8000/legacy> | Original testing webview — dense table, raw JSON |
 | <http://localhost:8000/docs> | OpenAPI / Swagger |
 | <http://localhost:8000/api/health/llm> | Live provider connectivity check |
 
@@ -280,7 +280,7 @@ medical-report-agents/
 │   │       ├── narrative.py      provider chain + templated fallback
 │   │       └── verify.py         the four checks
 │   └── static/
-│       ├── index.html            original webview
+│       ├── index.html            original webview (/legacy)
 │       └── app/                  built React bundle (gitignored)
 ├── frontend/                     Vite + React 19 + GSAP + three.js
 ├── data/lab_ontology.json        55 analytes, LOINC codes, ranges
