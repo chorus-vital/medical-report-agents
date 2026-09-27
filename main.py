@@ -7,6 +7,8 @@ Server: http://localhost:8000 (API docs at http://localhost:8000/docs)
 import uvicorn
 
 from config.settings import settings
+# Vercel loads the ASGI app from this root entrypoint.
+from src.api.app import app  # noqa: F401
 
 
 def main():

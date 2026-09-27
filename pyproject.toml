@@ -1,8 +1,0 @@
-# Vercel deployment config. Dependencies live in requirements.txt.
-
-[tool.vercel]
-entrypoint = "src.api.app:app"
-
-[tool.vercel.scripts]
-# Builds the React reader into src/static/app/, which FastAPI serves at /app.
-build = "cd frontend && npm ci && npm run build"
