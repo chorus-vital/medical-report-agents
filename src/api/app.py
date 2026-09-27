@@ -10,7 +10,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+)
 from fastapi.staticfiles import StaticFiles
 
 from config.settings import settings
@@ -98,25 +103,12 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 @app.get("/", include_in_schema=False)
-async def serve_webview():
-    """Serve the original interactive testing webview."""
-    index_file = static_dir / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
-    return HTMLResponse(
-        "<h2>Medical Report Analyzer Webview</h2><p>Static UI not found.</p>"
-    )
-
-
-@app.get("/app", include_in_schema=False)
-@app.get("/app/{_path:path}", include_in_schema=False)
-async def serve_react_app(_path: str = ""):
+async def serve_react_app():
     """
     Serve the React + GSAP reader built from ``frontend/``.
 
-    It lives beside the original page rather than replacing it, so the testing
-    webview keeps working while this one reaches parity. Build it with
-    ``npm run build`` in ``frontend/``; the bundle lands in ``static/app/``.
+    Build it with ``npm run build`` in ``frontend/``; the bundle lands in
+    ``static/app/``.
     """
     index_file = static_dir / "app" / "index.html"
     if index_file.exists():
@@ -126,6 +118,24 @@ async def serve_react_app(_path: str = ""):
         "<p>Run <code>npm install &amp;&amp; npm run build</code> in "
         "<code>frontend/</code>.</p>",
         status_code=503,
+    )
+
+
+@app.get("/app", include_in_schema=False)
+@app.get("/app/{_path:path}", include_in_schema=False)
+async def redirect_old_app_url(_path: str = ""):
+    """The reader used to live at /app; keep old links working."""
+    return RedirectResponse("/", status_code=301)
+
+
+@app.get("/legacy", include_in_schema=False)
+async def serve_webview():
+    """Serve the original interactive testing webview."""
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return HTMLResponse(
+        "<h2>Medical Report Analyzer Webview</h2><p>Static UI not found.</p>"
     )
 
 

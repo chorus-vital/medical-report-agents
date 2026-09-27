@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// The built bundle is served by FastAPI from src/static/app/, alongside the
-// original index.html — the old UI keeps working until this one is at parity.
+// The built bundle is served by FastAPI from src/static/app/ at /; the
+// original index.html is still reachable at /legacy.
 export default defineConfig({
   plugins: [react()],
   base: "/static/app/",
