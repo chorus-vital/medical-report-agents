@@ -220,3 +220,21 @@ async def test_degraded_is_true_when_the_template_really_was_used(dev_data, monk
     result = await r.analyze(dev_data["lab_results"], dev_data["patient_info"],
                              dev_data["report_notes"], extraction_degraded=False)
     assert result.degraded is True
+
+
+async def test_unevaluated_report_is_never_described_as_normal(monkeypatch):
+    # Regression: with one UNKNOWN row and no abnormalities the LLM was asked
+    # for a summary and wrote "All measured values are within the normal range".
+    async def must_not_be_called(*args, **kwargs):
+        raise AssertionError("LLM must not narrate a report with nothing evaluated")
+
+    monkeypatch.setattr("src.services.reasoning.narrative.narrate_llm", must_not_be_called)
+
+    rows = [{"test_name": "Age & Gender: 21 Year", "observed_value": "Female",
+             "flag": "UNKNOWN", "loinc_code": None}]
+    result = await r.analyze(rows, None, [], True)
+
+    assert result.escalation_level == "no_data"
+    assert result.confidence_score == 0.0
+    assert "normal range" not in result.summary.lower()
+    assert "could be checked" in result.summary

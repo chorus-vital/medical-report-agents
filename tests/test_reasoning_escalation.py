@@ -216,3 +216,16 @@ def test_a_repeated_analyte_does_not_duplicate_a_reason():
                   "751-8", "/mm3")]
     ids = [r.rule_id for r in e.escalate(_brief(rows)).reasons]
     assert ids.count("anc_moderate") == 1
+
+
+def test_rows_that_could_not_be_evaluated_are_not_routine():
+    # Regression: a failed extraction left one UNKNOWN junk row. total_rows was
+    # 1, so the report rendered a green "nothing outside range" banner.
+    rows = [_row("Age & Gender: 21 Year", "Female", None, "UNKNOWN")]
+    assert e.escalate(_brief(rows, degraded=True)).level == "no_data"
+
+
+def test_one_evaluated_row_among_unknowns_is_still_routine():
+    rows = [_row("Mentzer Index", "14.8", None, "UNKNOWN"),
+            _row("Hemoglobin", "15", "13 - 17", "GREEN", "718-7")]
+    assert e.escalate(_brief(rows)).level == "routine"
