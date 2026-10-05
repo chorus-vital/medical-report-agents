@@ -163,9 +163,10 @@ def _in_rule_units(value: float, unit: Optional[str],
 
 def escalate(brief: ClinicalBrief) -> Escalation:
     """Decide how soon these results should be acted on, and why."""
-    if brief.total_rows == 0:
+    if brief.nothing_evaluated:
         # Absence of data is not absence of disease, and must not render as a
-        # green "nothing outside range" banner.
+        # green "nothing outside range" banner. That holds just as much when
+        # rows exist but none could be evaluated as when there are no rows.
         return Escalation(level="no_data", reasons=())
 
     reasons: List[FiredRule] = []

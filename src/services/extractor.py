@@ -695,7 +695,10 @@ _NON_TEST_PATTERNS = re.compile(
     r"^(test|result|investigation|parameter|biological reference|reference "
     r"interval|approved by|reviewed by|page \d|patient (id|name)|report ref|"
     r"collected|received|reported|partner|ref\.? by|address|phone|email|"
-    r"clinical significance|conditions of|disclaimer)\b",
+    r"clinical significance|conditions of|disclaimer|"
+    r"age\s*(?:&|/|and)\s*(?:gender|sex)|(?:age|gender|sex)(?=\s*:)|"
+    r"sample (?:id|type|time)|"
+    r"booking time|report (?:id|time)|referred by)\b",
     re.I,
 )
 
@@ -705,6 +708,10 @@ _UNIT_CANON = {
     "/mm3": "/mm³",
     "10^3/ul": "10³/µL",
     "10*3/ul": "10³/µL",
+    "10^6/ul": "10⁶/µL",
+    "10*6/ul": "10⁶/µL",
+    # Some analysers label a percentage column "Percentile".
+    "percentile": "%",
     "ul": "µL",
     "ug/dl": "µg/dL",
     "uiu/ml": "µIU/mL",
@@ -794,6 +801,29 @@ _LAB_LINE = re.compile(
 _PIPE_LINE = re.compile(
     r"^\s*(?P<name>[^|\n\r]+?)\s*\|\s*(?P<value>[^|\n\r]+?)\s*"
     r"(?:\|\s*(?P<unit>[^|\n\r]*?)\s*)?(?:\|\s*(?P<range>[^|\n\r]*?)\s*)?$",
+    re.MULTILINE,
+)
+
+# Inline layout: the whole row on one line, single-space separated, usually
+# with "=" between the name and the value and the method trailing the range:
+#
+#     Hemoglobin (Hb) = 13.5 g/dL 11-16 Colorimetric Method
+#     Neutrophils % = 55.1 Percentile 50-70 TALFC
+#
+# _LAB_LINE cannot read this — it needs two or more spaces after the name and
+# nothing after the range — so without this pattern such a report yielded no
+# rows at all. Only horizontal whitespace is allowed between fields, so a match
+# can never straddle two lines.
+_INLINE_LINE = re.compile(
+    r"^[ \t]*"
+    r"(?P<name>[A-Za-z][^=\n]{1,70}?)"
+    r"(?:[ \t]*[=:][ \t]*|[ \t]+)"
+    r"(?P<value>\d[\d.,]*)"
+    r"(?:[ \t]+(?P<unit>10[ \t]*[\^*][ \t]*\d+[ \t]*/[ \t]*[A-Za-zµ]+|[A-Za-zµ%/]\S*))?"
+    r"[ \t]+"
+    r"(?P<range>[\d.,]+[ \t]*[-–—][ \t]*[\d.,]+|[<>≤≥]=?[ \t]*[\d.,]+)"
+    r"(?:[ \t]+(?P<method>[A-Za-z][^\n]*?))?"
+    r"[ \t]*$",
     re.MULTILINE,
 )
 
@@ -919,6 +949,15 @@ def _regex_fallback(raw_text: str) -> List[Dict[str, Any]]:
     for m in _LAB_LINE.finditer(raw_text):
         add(m.group("name"), m.group("value"), m.group("unit"), m.group("range"))
 
+    for m in _INLINE_LINE.finditer(raw_text):
+        add(
+            m.group("name"),
+            m.group("value"),
+            m.group("unit"),
+            m.group("range"),
+            m.group("method"),
+        )
+
     if not results:
         for m in _PIPE_LINE.finditer(raw_text):
             name, value = m.group("name").strip(), m.group("value").strip()
@@ -937,6 +976,12 @@ _PAT_AGE = re.compile(r"(?:age)\s*[:\-]?\s*(\d{1,3})\s*(?:years?\(?s?\)?|yrs?)",
 _PAT_AGE_INLINE = re.compile(r"\b(\d{1,3})\s*Year\(s\)", re.I)
 _PAT_SEX = re.compile(r"(?:sex|gender)\s*[:\-]\s*(male|female|m|f)\b", re.I)
 _PAT_SEX_INLINE = re.compile(r"Year\(s\)\s*/?\s*(Male|Female)\b", re.I)
+# "Age & Gender: 21 Year | Female", "Age/Sex : 45 Yrs / M"
+_PAT_AGE_SEX = re.compile(
+    r"age\s*(?:&|/|and)\s*(?:gender|sex)\s*[:\-]\s*(\d{1,3})\s*(?:years?|yrs?|y)?\b"
+    r"\s*[|/,]?\s*(male|female|m|f)\b",
+    re.I,
+)
 _PAT_PID = re.compile(r"Patient\s*ID\s*[:\-]\s*(\S+)", re.I)
 _PAT_REF = re.compile(r"Report\s*Ref\.?\s*ID\s*[:\-]\s*(\S+)", re.I)
 _PAT_COLLECTED = re.compile(r"Collected\s*[:\-]\s*(.+?)(?:\n|$)", re.I)
@@ -958,13 +1003,18 @@ def _regex_patient_info(raw_text: str) -> Optional[Dict[str, Any]]:
         if m:
             info[key] = m.group(1).strip()
 
+    combined = _PAT_AGE_SEX.search(raw_text)
+
     m = _PAT_AGE.search(raw_text) or _PAT_AGE_INLINE.search(raw_text)
     if m:
         info["age"] = m.group(1).strip()
+    elif combined:
+        info["age"] = combined.group(1)
 
     m = _PAT_SEX.search(raw_text) or _PAT_SEX_INLINE.search(raw_text)
-    if m:
-        raw = m.group(1).strip().upper()
+    raw = m.group(1) if m else (combined.group(2) if combined else None)
+    if raw:
+        raw = raw.strip().upper()
         info["sex"] = "Male" if raw in ("M", "MALE") else "Female"
 
     return {k: v for k, v in info.items() if v} or None

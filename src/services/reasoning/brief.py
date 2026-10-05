@@ -75,6 +75,17 @@ class ClinicalBrief:
     allowed_analytes: frozenset
     allowed_loinc: frozenset
     unknown_analytes: frozenset
+
+    @property
+    def nothing_evaluated(self) -> bool:
+        """
+        No row was checked against a reference interval.
+
+        True for an empty report and equally for one whose every row is
+        UNKNOWN — a failed extraction that salvaged only a header line, say.
+        Either way there is no evidence of normality to report.
+        """
+        return self.unknown_rows >= self.total_rows
     # Ontology-authored glosses. Vetted repo content, so the verifier exempts
     # these exact spans from the diagnosis blocklist the way it exempts a
     # quoted lab note — "infection-fighting white blood cells" is a definition,

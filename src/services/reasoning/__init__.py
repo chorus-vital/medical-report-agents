@@ -99,7 +99,9 @@ async def analyze(
         for r in escalation.reasons
     ]
 
-    if brief.total_rows == 0:
+    if brief.nothing_evaluated:
+        # Nothing to narrate, and an LLM handed a brief with no abnormalities
+        # will happily write "everything is normal" — so it is not asked.
         draft = _narrative.render_fallback(brief, escalation)
         return ReasoningResult(
             summary=draft.summary,

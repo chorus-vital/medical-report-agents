@@ -46,6 +46,13 @@ def render_fallback(brief: ClinicalBrief, escalation: Escalation) -> NarrativeDr
             summary="No lab results could be read from this report, so there is "
                     "nothing to summarise.",
         )
+    if brief.nothing_evaluated:
+        return NarrativeDraft(
+            summary="None of the lines read from this report could be checked "
+                    "against a reference range, so nothing can be said about "
+                    "whether the results are normal. The report may not have "
+                    "been read correctly — please review the original.",
+        )
 
     abnormal = len(brief.abnormalities)
     parts: List[str] = []

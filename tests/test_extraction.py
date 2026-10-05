@@ -331,3 +331,88 @@ def test_live_text_sample_extraction():
     by_name = {i["test_name"].lower(): i for i in result.items}
     assert by_name["hemoglobin"]["observed_value"] == "12.1"
     assert by_name["hemoglobin"]["unit"] == "g/dL"
+
+
+# ───────────────── Inline "name = value unit range method" layout ─────────────
+#
+# Regression: a report printed one row per line with "=" after the name gave
+# the fallback zero lab rows. Its only "result" was the demographics line
+# "Age & Gender: 21 Year | Female", picked up by the pipe-table pattern, and the
+# pipeline went on to tell the patient that every value was normal.
+
+INLINE_REPORT = """\
+Sample ID: 123456789
+Report ID: LAB000001
+Patient Name: Test Patient
+Age & Gender: 21 Year | Female
+Address: Room No. 12, Some Hostel, SOMECITY - 466114, Some State
+Sample Type: Whole Blood
+Booking Time: 15 Jul 2026 06:48 PM
+Referred By:Dr. Someone Sample Time: 15 Jul 2026 06:58 PM
+Complete Blood Count (CBC)
+Investigation / Test Name Result Unit Reference Method
+Complete Blood Count
+Hemoglobin (Hb) = 13.5 g/dL 11-16 Colorimetric Method
+RBC Count = 4.80 10^6/uL 3.5-5.5 Impedence Method
+HCT = 42.8 Percentile 37-54 Calculated
+MCHC (Mean Corpuscular Hb Concentration) = 31.5 g/dL 32-36 Calculated
+RDW-SD = 57.8 fL 35-56 Calculated
+Total WBC Count (Leukocyte Count) = 9.35 10^3/uL 4-10 Impedence Method
+Differential Leucocyte Count
+Neutrophils % = 55.1 Percentile 50-70 TALFC
+Eosinophils % = 6.8 Percentile 0.5-5 TALFC
+Absolute Leucocyte Count
+Absolute Eosinophil Count = 0.64 10^3/uL 0.02-0.5 TALFC
+Platelet Count (Thrombocyte Count) = 341 10^3/uL 100-300 Impedence Method
+The results are generated through a 5-Part Fully Automated Haematology Auto-Analyser.
+*End of Report*
+1800 11 7500
+"""
+
+
+def test_regex_fallback_reads_inline_equals_layout():
+    items = _clean_items(_regex_fallback(INLINE_REPORT))
+    by_name = {i["test_name"]: i for i in items}
+
+    assert len(items) == 10
+    hb = by_name["Hemoglobin (Hb)"]
+    assert hb["observed_value"] == "13.5"
+    assert hb["unit"] == "g/dL"
+    assert hb["reference_range"] == "11-16"
+    assert hb["method"] == "Colorimetric Method"
+
+    # Power-of-ten units, and the analyser's "Percentile" label for a percentage.
+    assert by_name["Total WBC Count (Leukocyte Count)"]["unit"] == "10³/µL"
+    assert by_name["RBC Count"]["unit"] == "10⁶/µL"
+    assert by_name["Neutrophils %"]["unit"] == "%"
+    assert by_name["Absolute Eosinophil Count"]["reference_range"] == "0.02-0.5"
+
+
+def test_regex_fallback_does_not_turn_header_lines_into_tests():
+    names = [i["test_name"] for i in _clean_items(_regex_fallback(INLINE_REPORT))]
+    assert not any(
+        n.lower().startswith(("age", "address", "sample", "booking", "referred", "report"))
+        for n in names
+    )
+
+
+def test_regex_fallback_returns_nothing_rather_than_a_demographics_row():
+    # No lab rows at all: the pipe-table pattern must not promote the
+    # "Age & Gender: 21 Year | Female" line to a result.
+    header_only = "\n".join(INLINE_REPORT.splitlines()[:8])
+    assert _clean_items(_regex_fallback(header_only)) == []
+
+
+def test_regex_fallback_reads_inline_layout_without_equals_sign():
+    items = _clean_items(_regex_fallback("Vitamin B12 320 pg/mL 200 - 900\nFree T4 0.9 ng/dL 0.8-1.8"))
+    assert [(i["test_name"], i["observed_value"]) for i in items] == [
+        ("Vitamin B12", "320"),
+        ("Free T4", "0.9"),
+    ]
+
+
+def test_regex_patient_info_reads_combined_age_and_gender():
+    info = _regex_patient_info(INLINE_REPORT)
+    assert info["name"] == "Test Patient"
+    assert info["age"] == "21"
+    assert info["sex"] == "Female"
